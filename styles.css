@@ -13,10 +13,21 @@ body {
 }
 
 .navbar {
-    background-color: #222222;
+    background-color: #10211d;
     display: flex;
     justify-content: space-around;
     color: #F8F8F8
+}
+
+main {
+    border: solid 5px #F8F8F8;
+    margin: 20px;
+    padding: 20px;
+    max-width: 500px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    
 }
 
 a {
@@ -42,4 +53,9 @@ a {
 }
 .skip:focus {
   top: 0; 
+}
+
+:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
 }
