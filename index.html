@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChalkboardAI</title>
     <link rel="stylesheet" href="styles.css">
@@ -9,7 +9,21 @@
 <body>
     <header>
         <a href="#main" class="skip">Skip to main content</a>
-       <img src="images/logo-transparent.png" alt="ChalkboardAI Logo" class="logo">
+        <picture>
+            <source type="image/webp"
+                    srcset="images/logo-transparent-480.webp 480w,
+                            images/logo-transparent-800.webp 800w,
+                            images/logo-transparent-1200.webp 1200w">
+            <img class="logo"
+  src="images/logo-transparent-800.png"
+  srcset="images/logo-transparent-480.png 480w,
+          images/logo-transparent-800.png 800w,
+          images/logo-transparent-1200.png 1200w"
+  sizes="(max-width: 800px) 100vw, 800px"
+  alt="ChalkboardAI logo"
+  width="800" height="200"
+  loading="eager" fetchpriority="high" decoding="async">
+</picture>
     </header>
     <nav class="navbar" role="navigation" aria-label="Main Navigation">
         <ul>
@@ -18,10 +32,26 @@
             <li><a href="/reports">Reports</a></li>
         </ul>
     </nav>
-<main id="main">
-    <h1>Tom Barton-Wilkes - Developer</h1>
+<main id="main" class="main">
+    <div class="intro">
+        <h1>Tom Barton-Wilkes - Developer</h1>
+        <div>
+            <p>Teacher turned developer. I see solutions to hidden teacher workload in tech and particularly in data safe, foolproof AI tools. Feel free to have a play with tools below. If they help, I'd appreciate it if you could let me know by clicking <a href="https://example.com" class="ignore">here</a> and sending me a message. :)</a></p>
+        </div>
+    </div>
     <div>
-        <p>Teacher turned developer. I see solutions to hidden teacher workload in tech and particularly in data safe, foolproof AI tools. Feel free to have a play with tools below. If they help, I'd appreciate it if you could let me know by clicking <a href="https://example.com">here</a> and sending me a message. :)</a></p>
+        <div class="full-band">
+            <div class="container"></div>
+                <h2>ChalkboardAI - A set of data-secure tools to help
+teachers harness the power of AI.</h2>
+            </div>
+        </div>
+        <ul class="card">
+            <li><a href="/rota" class="ignore">Rota</a> - Create intervention support plans for your class in minutes. Uses AI to suggest an initial draft based on YOUR classroom context.</li>
+            <li><a href="/provision-mapper" class="ignore">Provision Mapper</a> - Map your school's provision quickly and easily. Uses AI to suggest provisions based on your school's context.</li>
+            <li><a href="/reports" class="ignore">Reports</a> - A one-click report writer. Uses AI to write reports for you class based on your data.</li>
+        </ul>
+        <small>All tools are free to use. No sign-up required. No data is stored or shared. All processing is done locally in your browser.</small>
     </div>
 </main>
 <footer>
