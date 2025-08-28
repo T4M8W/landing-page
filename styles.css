@@ -13,6 +13,7 @@ body {
     height: auto;
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: 20px;
 }
 
 .navbar ul { 
@@ -38,6 +39,7 @@ body {
 
 .intro {
     border: 2px solid #F8F8F8;
+    margin: 40px 0;
 }
 
 .full-band {
@@ -46,7 +48,37 @@ body {
   margin-top: 20px;
   margin-left: calc(-50vw + 50%);
   margin-right: calc(-50vw + 50%);
-  padding: 10px 0;
+  padding: 0 0;
+}
+
+.tool-cards { 
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  list-style:none;
+  padding:0;
+}
+
+@media (min-width:760px){ .tool-cards{flex-direction:row;} .tool-card{flex:1;} }
+
+.tool-card a {
+  display:block;
+  padding:16px;
+  border:2px solid #F8F8F8;
+  border-radius:8px;
+  text-decoration:none;
+  transition:transform .12s, box-shadow .12s, background-color .12s;
+}
+
+a:hover {
+  transform:translateY(-2px);
+  box-shadow:0 6px 14px rgba(0,0,0,.25);
+  background-color:rgba(255,255,255,.03);
+}
+
+a:focus-visible {
+  outline:3px solid #F8F8F8;
+  outline-offset:3px;
 }
 
 a {
@@ -86,14 +118,4 @@ a.ignore:hover, a.ignore:focus-visible { text-decoration: underline; }
 :focus-visible {
   outline: 3px solid #fff;
   outline-offset: 2px;
-}
-
-.card {
-    display:flex;
-    flex-direction: row;
-    justify-content: space-around;
-    border: 2px solid #F8F8F8;
-    padding: 10px;
-    list-style: none;
-    text-align: left;
 }
