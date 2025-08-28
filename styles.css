@@ -2,8 +2,8 @@ body {
     font-family: nunito, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #10211d;
-    color: #F8F8F8;
+    background-color: #dfeee8;
+    color: #111111;
     text-align: center;
 }
 
@@ -23,7 +23,7 @@ body {
   display: flex; 
   justify-content: center; 
   gap: 1rem; 
-  background: #222;
+  background: #00a97a;
 }
 .navbar a { display: block; padding: 12px 16px; }
 .navbar a:hover, .navbar a:focus-visible { text-decoration: underline; }
@@ -38,12 +38,12 @@ body {
 }
 
 .intro {
-    border: 2px solid #F8F8F8;
+    border: 2px solid #00a97a;
     margin: 40px 0;
 }
 
 .full-band {
-  background: #222;
+  background: #00a97a;
   width: 100vw;
   margin-top: 20px;
   margin-left: calc(-50vw + 50%);
@@ -64,7 +64,7 @@ body {
 .tool-card a {
   display:block;
   padding:16px;
-  border:2px solid #F8F8F8;
+  border:2px solid #00a97a;
   border-radius:8px;
   text-decoration:none;
   transition:transform .12s, box-shadow .12s, background-color .12s;
@@ -82,14 +82,14 @@ a:focus-visible {
 }
 
 a {
-    color: #F8F8F8;
+    color: #111111;
     text-decoration: none;
     padding: 14px 20px;
     display: inline-block;
 }
 
 .ignore {
-    color: #F8F8F8;
+    color: #111111;
     text-decoration: none;
     padding: 0px 0px;
     display: inline-block;
@@ -116,6 +116,6 @@ a.ignore:hover, a.ignore:focus-visible { text-decoration: underline; }
 }
 
 :focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid #00a97a;
   outline-offset: 2px;
 }
