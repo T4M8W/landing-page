@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>About Me</title>
+    <link rel="stylesheet" href="../styles.css">
+  </head>
+  <body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="container" style="padding:1.25rem 0;">
+    <a href="../index.html">
+        <div class="logo-crop">
+            <picture>
+                <source type="image/webp"
+                    srcset="../images/logo-transparent-480-28.08.25.webp 480w,
+                            ../images/logo-transparent-800-28.08.25.webp 800w,
+                            ../images/logo-transparent-1200-28.08.25.webp 1200w"
+                    sizes="(max-width: 800px) 80vw, 800px">
+                <img class="logo"
+                        src="../images/logo-transparent-800-28.08.25.png"
+                        srcset="../images/logo-transparent-480-28.08.25.png 480w,
+                                ../images/logo-transparent-800-28.08.25.png 800w,
+                                ../images/logo-transparent-1200-28.08.25.png 1200w"
+                        sizes="(max-width: 800px) 80vw, 800px"
+                        alt="ChalkboardAI logo"
+                        width="800" height="200"
+                        loading="eager" fetchpriority="high" decoding="async">
+            </picture>
+        </div>
+    </a>
+      <nav class="navbar full-band" aria-label="Primary">
+        <ul style="list-style:none;display:flex;gap:1rem;justify-content:center;margin:0;padding:0;">
+          <li><a href="../rota/index.html">Rota</a></li>
+            <li><a href="../provision-mapper/index.html">Provision Mapper</a></li>
+            <li><a href="../reports/index.html">Reports</a></li>
+            <li><a href="../about-me/index.html">About me</a></li>
+            <li><a href="./index.html" aria-current="page">Contact Me</a></li>
+        </ul>
+    </nav>
+  </header>
+    <main class="tool-blurb">
+        <h1>Contact Form</h1>
+        <p>I’d love to hear from you. Whether you’re interested in ChalkboardAI, curious about the tools I’m building, or simply want to get in touch, please use the form below. I’ll respond as soon as I can.</p>
+        <form name="contact" method="POST" data-netlify="true" id="contact-form">
+            <input type="text" name="name" placeholder="Your name" required>
+            <input type="email" name="email" placeholder="Your email" required>
+            <textarea name="message" placeholder="Your message" required></textarea>
+            <button type="submit">Send</button>
+        </form>
+        <small>
+            <ul id="contact-disclaimer">
+                <li>I typically reply within 2–3 working days.</li>
+                <li>Your details are used only to respond to your message—no mailing lists, no sharing.</li>
+            </ul>
+        </small>
+    </main>
+    <footer>
+        <p><a href="../index.html" aria-label="Back to ChalkboardAI home">← Back to home</a></p>
+        <img src="../images/icon-transparent.png" alt="ChalkboardAI Icon" class="icon">
+        <p>© 2025 ChalkboardAI. All rights reserved.</p>
+    </footer>
+  </body>
+</html>

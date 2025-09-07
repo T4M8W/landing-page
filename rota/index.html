@@ -8,40 +8,42 @@
   <meta name="robots" content="index,follow" />
   <link rel="icon" href="/favicon.ico?v=1">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=1" sizes="180x180">
-  <link rel="stylesheet" href="/styles.css?v=1">
+  <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="container" style="padding:1.25rem 0;">
-    <div class="logo-crop">
-        <picture>
+    <a href="../index.html">
+        <div class="logo-crop">
+            <picture>
                 <source type="image/webp"
-                        srcset="/images/logo-transparent-480-28.08.25.webp 480w,
-                                /images/logo-transparent-800-28.08.25.webp 800w,
-                                /images/logo-transparent-1200-28.08.25.webp 1200w">
+                    srcset="../images/logo-transparent-480-28.08.25.webp 480w,
+                            ../images/logo-transparent-800-28.08.25.webp 800w,
+                            ../images/logo-transparent-1200-28.08.25.webp 1200w"
+                    sizes="(max-width: 800px) 80vw, 800px">
                 <img class="logo"
-                    src="images/logo-transparent-800-28.08.25.png"
-                    srcset="/images/logo-transparent-480-28.08.25.png 480w,
-                            /images/logo-transparent-800-28.08.25.png 800w,
-                            /images/logo-transparent-1200-28.08.25.png 1200w"
-                    sizes="(max-width: 800px) 100vw, 800px"
-                    alt="ChalkboardAI logo"
-                    width="800" height="200"
-                    loading="eager" fetchpriority="high" decoding="async">
-                </picture>
-            </div>
-      <nav class="navbar" aria-label="Primary">
-        <ul style="list-style:none;display:flex;gap:1rem;justify-content:center;margin:0;padding:0;">
-          <li><a href="/rota" aria-current="page">Rota</a></li>
-          <li><a href="/provision-mapper">Provision Mapper</a></li>
-          <li><a href="/reports">Reports</a></li>
-        </ul>
+                        src="../images/logo-transparent-800-28.08.25.png"
+                        srcset="../images/logo-transparent-480-28.08.25.png 480w,
+                                ../images/logo-transparent-800-28.08.25.png 800w,
+                                ../images/logo-transparent-1200-28.08.25.png 1200w"
+                        sizes="(max-width: 800px) 80vw, 800px"
+                        alt="ChalkboardAI logo"
+                        width="800" height="200"
+                        loading="eager" fetchpriority="high" decoding="async">
+            </picture>
+        </div>
+    </a>
+    <nav class="full-band navbar" aria-label="Primary">
+      <ul>
+        <li><a href="./index.html" aria-current="page">Rota</a></li>
+        <li><a href="../provision-mapper/index.html">Provision Mapper</a></li>
+        <li><a href="../reports/index.html">Reports</a></li>
+        <li><a href="../about-me/index.html">About me</a></li>
+        <li><a href="../contact-me/index.html">Contact Me</a></li>
+      </ul>
     </nav>
   </header>
-
-
-
 
   <main id="main" class="container" style="padding:2rem 0;">
     <h1>Rota <span style="opacity:.7;font-weight:600;">— Coming soon</span></h1>
@@ -54,10 +56,11 @@
     </ul>
 
     <p style="margin-top:1rem;">Want to try it first? <a href="mailto:hello@chalkboardai.co.uk">Get in touch</a>.</p>
-    <p><a href="/" aria-label="Back to ChalkboardAI home">← Back to home</a></p>
+    <p><a href="../index.html" aria-label="Back to ChalkboardAI home">← Back to home</a></p>
   </main>
 
   <footer class="container" style="padding:2rem 0;opacity:.8;">
+    <img src="../images/icon-transparent.png" alt="ChalkboardAI Icon" class="icon">
     <p>© ChalkboardAI. Privacy-first by design.</p>
   </footer>
 </body>

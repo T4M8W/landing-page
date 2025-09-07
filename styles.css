@@ -167,7 +167,7 @@ button.see-more:hover, button.see-more:focus-visible {
     background-color: #008f68;
 }
 
-.rota-blurb {
+.tool-blurb {
     border: 2px solid #00a97a;
     border-radius: 8px;
     padding: 20px;
@@ -202,3 +202,35 @@ button.see-more:hover, button.see-more:focus-visible {
 }
 
 [hidden] { display:none !important; }
+
+.subheading {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-align: left;;
+}
+
+.container {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+
+#contact-disclaimer {
+    font-size: 0.9rem;
+    color: #555555;
+    margin-top: 10px;
+    text-align: left
+}
+
+#contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.logo-link { display: inline-block; }
+.logo-link img.logo { display: block; height: auto; }
