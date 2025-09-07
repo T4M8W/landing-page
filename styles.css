@@ -139,7 +139,7 @@ a.ignore:hover, a.ignore:focus-visible { text-decoration: underline; }
   outline-offset: 2px;
 }
 
-#rota-details {
+details {
     text-align: center;
     margin: 10px 0 0 0;
     padding: 10px;
