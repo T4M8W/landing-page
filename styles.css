@@ -138,3 +138,67 @@ a.ignore:hover, a.ignore:focus-visible { text-decoration: underline; }
   outline: 3px solid #00a97a;
   outline-offset: 2px;
 }
+
+#rota-details {
+    text-align: center;
+    margin: 10px 0 0 0;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: #ccfbf1;
+    display: block;
+}
+
+#rota.details:hover {
+  background-color: #99f6e4;
+}
+
+button.see-more {
+    background-color: #00a97a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    
+}
+
+button.see-more:hover, button.see-more:focus-visible {
+    background-color: #008f68;
+}
+
+.rota-blurb {
+    border: 2px solid #00a97a;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    background-color: #f0fdfa;
+    display: block;
+}
+
+.blurb-p {
+    margin-bottom: 8px;
+}
+
+.provision-mapper-blurb {
+    border: 2px solid #00a97a;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    background-color: #f0fdfa;
+}
+
+#provision-mapper-details {
+    text-align: center;
+    margin: 10px 0 0 0;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: #ccfbf1;
+    display: block;
+}
+
+#provision-mapper-details.details:hover {
+  background-color: #99f6e4;
+}
+
+[hidden] { display:none !important; }
