@@ -204,3 +204,14 @@ button.see-more:hover, button.see-more:focus-visible {
     margin: 5px auto;
     max-width: 150px;
 }
+
+form div {
+  margin-bottom: 1em;
+}
+label {
+  display: inline-block;
+  width: 100px; /* keeps labels aligned */
+}
+input, textarea {
+  width: 250px;
+}
