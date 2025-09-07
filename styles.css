@@ -148,7 +148,7 @@ a.ignore:hover, a.ignore:focus-visible { text-decoration: underline; }
     display: block;
 }
 
-#rota.details:hover {
+.details:hover {
   background-color: #99f6e4;
 }
 
