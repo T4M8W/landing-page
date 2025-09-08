@@ -227,6 +227,26 @@ body {font-size:16px; line-height:1.6;}
 h1 {font-size: clamp(1.6rem, 3.5vw, 2.4rem);}
 h2 {font-size: clamp(1.3rem, 3vw, 1.8rem);}
 
+html, body {overflow-x:hidden;}
+*, *::before, *::after {box-sizing:border-box;}
+
+.container {max-width: 72rem; margin: 0 auto; padding: 0 1rem;}
+
+button, .btn, nav a {min-height:44px; padding:0.75rem 1rem; display:inline-flex; align-items:center;}
+
+.navbar ul {display:flex; gap:.75rem; flex-wrap:wrap;}
+@media (max-width: 700px){
+  .navbar ul {flex-direction:column; align-items:stretch;}
+  .navbar a {display:block; padding:0.75rem 1rem;}
+}
+
+.card, section {width:100%; max-width:40rem;}
+
+p, li, a {word-wrap:break-word; overflow-wrap:anywhere;}
+
+
+
+
 /* --- Containers & cards --- */
 .container {max-width:72rem; margin:0 auto; padding:0 1rem;}
 .card, section {width:100%; max-width:40rem; margin-inline:auto;}
