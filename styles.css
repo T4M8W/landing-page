@@ -51,6 +51,14 @@ p, li, a { overflow-wrap: anywhere; word-wrap: break-word; }
   object-fit: cover;
   object-position: center;
 }
+
+.logo-crop{
+  position: relative;     /* make a stacking context */
+  z-index: 2;             /* sit above the nav if they touch */
+  margin-top: 12px;
+  margin-bottom: 16px;    /* add breathing room below the image */
+}
+
 .logo-link { display: inline-block; }
 .logo-link img.logo { display: block; height: auto; }
 
@@ -85,6 +93,14 @@ p, li, a { overflow-wrap: anywhere; word-wrap: break-word; }
 }
 .navbar a { display: block; padding: 12px 16px; }
 .navbar a:hover, .navbar a:focus-visible { text-decoration: underline; }
+
+.navbar{
+  position: relative;
+  z-index: 1;
+}
+
+.navbar { background: #00a97a; }
+.navbar ul { background: transparent; }
 
 /* Generic nav/tap target sizing (kept once) */
 button, .btn, nav a { min-height: 44px; padding: .75rem 1rem; display: inline-flex; align-items: center; }
