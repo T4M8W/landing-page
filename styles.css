@@ -215,3 +215,29 @@ label {
 input, textarea {
   width: 250px;
 }
+
+/* --- Mobile-safe reset --- */
+html, body {margin:0; padding:0; overflow-x:hidden;}
+*, *::before, *::after {box-sizing:border-box;}
+img, picture, video {max-width:100%; height:auto; display:block;}
+p, li, a {overflow-wrap:anywhere;}
+
+/* --- Readable defaults --- */
+body {font-size:16px; line-height:1.6;}
+h1 {font-size: clamp(1.6rem, 3.5vw, 2.4rem);}
+h2 {font-size: clamp(1.3rem, 3vw, 1.8rem);}
+
+/* --- Containers & cards --- */
+.container {max-width:72rem; margin:0 auto; padding:0 1rem;}
+.card, section {width:100%; max-width:40rem; margin-inline:auto;}
+
+/* --- Tap targets & nav --- */
+button, .btn, nav a {min-height:44px; padding:.75rem 1rem; display:inline-flex; align-items:center;}
+.navbar ul {display:flex; gap:.75rem; flex-wrap:wrap;}
+
+/* --- Single small-screen rule --- */
+@media (max-width:700px){
+  .navbar ul {flex-direction:column; align-items:stretch;}
+  .grid {display:block;}        /* if you use grids for tool cards */
+  .hero {padding:2rem 1rem; text-align:center;}
+}
