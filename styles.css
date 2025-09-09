@@ -283,8 +283,9 @@ input, textarea { width: 250px; max-width: 100%; }
 }
 
 #tom-img {
-  width: 150px;
-  aspect-ratio: 4 / 5;
+  width: 200px;
+  aspect-ratio: 3/4;
+  object-fit: cover;
   border: solid 2px #00a97a;
   border-radius: 10px;
   outline: 2px solid rgba(0,169,122,.25);
