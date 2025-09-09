@@ -28,9 +28,17 @@
             </div>
     <nav class="navbar full-band" role="navigation" aria-label="Main Navigation">
         <ul>
-            <li><a href="./rota/index.html">Rota</a></li>
-            <li><a href="./provision-mapper/index.html">Provision Mapper</a></li>
-            <li><a href="./reports/index.html">Reports</a></li>
+            <li class="dropdown">
+            <button onclick="toggleDropdown()" class="dropbtn navbar full-band"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="dropdown-content">
+                The Tools
+            </button>
+            <div class="dropdown-content" id="dropdown-content" role="menu">
+                <a href="./rota/index.html" role="menuitem">Rota</a>
+                <a href="./provision-mapper/index.html" role="menuitem">Provision Mapper</a>
+                <a href="./reports/index.html" role="menuitem">Reports</a>
+            </div>
+            </li>
             <li><a href="./about-me/index.html">About me</a></li>
             <li><a href="./contact-me/index.html">Contact Me</a></li>
         </ul>
