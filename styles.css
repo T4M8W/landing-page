@@ -41,10 +41,13 @@ body {
   margin: 0; 
   padding:0; 
   display: flex; 
-  justify-content: center; 
-  gap: 1rem; 
+  align-items: center;
+  gap: 1rem;
+  list-style: none;
   background: #00a97a;
 }
+
+
 .navbar a { display: block; padding: 12px 16px; }
 .navbar a:hover, .navbar a:focus-visible { text-decoration: underline; }
 
@@ -267,14 +270,14 @@ input, textarea { max-width: 100%; }
 .dropbtn {
   background-color: #00a97a;
   color: #111111;
-  display:block;
+  display: block;
+  width: auto;
   padding: 10px;
   font-size: 16px;
   border: none;
   cursor: pointer;
   border-radius: 8px;
 }
-
 
 .dropbtn:hover {
   transform:translateY(-2px);
@@ -311,3 +314,38 @@ input, textarea { max-width: 100%; }
 }
 
 .dropdown-content.show { display: inline; }
+
+/* make the nav items sit in a row */
+.navbar ul {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* dropdown container only as big as its contents */
+.dropdown {
+  position: relative;
+  display: inline-block; /* you already have this — good */
+}
+
+/* don't let the button stretch across the navbar */
+.dropbtn {
+  display: inline-flex;          /* was: block */
+  align-items: center;
+  width: auto;                   /* ensure no full-width */
+}
+
+/* show the panel and place it directly below the button */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;     /* sit below the button */
+  left: 0;
+  background-color: #f1f1f1;
+  min-width: 160px;
+  box-shadow: 0 8px 16px rgba(0,0,0,.2);
+  z-index: 9999; /* ensure it appears above the bar */
+}
