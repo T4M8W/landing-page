@@ -34,11 +34,19 @@
             </picture>
         </div>
     </a>
-      <nav class="full-band navbar" aria-label="Primary">
-        <ul style="list-style:none;display:flex;gap:1rem;justify-content:center;margin:0;padding:0;">
-          <li><a href="../rota/index.html">Rota</a></li>
-            <li><a href="../provision-mapper/index.html">Provision Mapper</a></li>
-            <li><a href="./index.html" aria-current="page">Reports</a></li>
+      <nav class="navbar full-bleed" role="navigation" aria-label="Main Navigation">
+        <ul>
+            <li class="dropdown">
+            <button onclick="toggleDropdown()" class="dropbtn"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="dropdown-content">
+                The Tools
+            </button>
+            <div class="dropdown-content" id="dropdown-content" role="menu">
+                <a href="../rota/index.html" role="menuitem">Rota</a>
+                <a href="../provision-mapper/index.html" role="menuitem">Provision Mapper</a>
+                <a href="./reports/index.html" aria-current="page" role="menuitem">Reports</a>
+            </div>
+            </li>
             <li><a href="../about-me/index.html">About me</a></li>
             <li><a href="../contact-me/index.html">Contact Me</a></li>
         </ul>
@@ -64,4 +72,5 @@
     <p>© ChalkboardAI. Privacy-first by design.</p>
   </footer>
 </body>
+<script src="../script.js"></script>
 </html>
