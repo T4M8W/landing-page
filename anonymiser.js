@@ -1,147 +1,94 @@
-/* ======== /anonymiser.js ======== */
+// ===== Minimal anonymiser (Scrimba-level) =====
 
-export function normalizeName(raw) {
-  if (!raw) return "";
-  const s = String(raw).trim().replace(/\s+/g, " ");
-  return s
-    .toLowerCase()
-    .split(" ")
-    .map(w => (w ? w[0].toUpperCase() + w.slice(1) : ""))
-    .join(" ");
+// 1) Get names in order (one per line). Trims and drops blank lines.
+function getNames(raw) {
+  return raw
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map(n => n.trim())
+    .filter(n => n.length > 0);
 }
 
-function mulberry32(seed) {
-  return function () {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function shuffleDeterministic(arr, seed = 12345) {
-  const rnd = mulberry32(seed);
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function nameRegex(fullName) {
-  const esc = fullName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${esc}\\b`, "g");
-}
-
-export function buildPseudonymMaps(pupilNames, options = {}) {
-  const { scheme = "Pupil-###", startAt = 1, seed = null } = options;
-
-  const seen = new Set();
-  let clean = [];
-  for (const n of pupilNames) {
-    const norm = normalizeName(n);
-    if (!norm || seen.has(norm)) continue;
-    seen.add(norm);
-    clean.push(norm);
-  }
-  if (typeof seed === "number") clean = shuffleDeterministic(clean, seed);
-
-  const greek = [
-    "Alpha","Beta","Gamma","Delta","Epsilon","Zeta","Eta","Theta","Iota","Kappa",
-    "Lambda","Mu","Nu","Xi","Omicron","Pi","Rho","Sigma","Tau","Upsilon","Phi","Chi","Psi","Omega"
-  ];
-  const makePseudo = (i) => {
-    const num = (startAt + i).toString().padStart(3, "0");
-    if (typeof scheme === "function") return scheme(startAt + i, i);
-    if (scheme === "Greek") {
-      const base = greek[i % greek.length];
-      const cycle = Math.floor(i / greek.length) + 1;
-      return `${base}-${cycle}`;
-    }
-    return `Pupil-${num}`;
-  };
-
-  const realToPseudo = new Map();
-  const pseudoToReal = new Map();
-  const list = [];
-  clean.forEach((real, i) => {
-    const pseudo = makePseudo(i);
-    realToPseudo.set(real, pseudo);
-    pseudoToReal.set(pseudo, real);
-    list.push({ real, pseudo });
+// 2) Build a simple, deterministic map (no de-dupe, no sorting)
+function buildMap(names) {
+  const realToPseudo = {};
+  const pseudoToReal = {};
+  names.forEach((name, i) => {
+    const pseudo = "Anon-" + String(i + 1).padStart(2, "0");
+    realToPseudo[name] = pseudo;
+    pseudoToReal[pseudo] = name;
   });
-
-  return { realToPseudo, pseudoToReal, list };
+  return { realToPseudo, pseudoToReal, names };
 }
 
-export function anonymise(input, realToPseudo, { fields = [], extraNames = [] } = {}) {
-  const targetNames = [
-    ...realToPseudo.keys(),
-    ...extraNames.map(normalizeName),
-  ];
-  const replacers = targetNames
-    .map((n) => ({ name: n, re: nameRegex(n), pseudo: realToPseudo.get(n) || null }))
-    .filter((x) => x.pseudo);
-
-  const replaceInString = (s) => {
-    let out = s;
-    for (const { re, pseudo } of replacers) out = out.replace(re, pseudo);
-    return out;
-  };
-
-  if (typeof input === "string") return replaceInString(input);
-
-  if (Array.isArray(input)) {
-    return input.map((row) => anonymise(row, realToPseudo, { fields, extraNames }));
-  }
-
-  if (input && typeof input === "object") {
-    const copy = { ...input };
-    for (const key of fields) {
-      if (!(key in copy) || copy[key] == null) continue;
-      copy[key] = replaceInString(String(copy[key]));
-    }
-    return copy;
-  }
-
-  return input;
+// 3) Simple replace using word boundaries (basic regex).
+//    (We sort longer names first so "Ann" doesn't hit inside "Anna".)
+function anonymiseText(text, realToPseudo) {
+  const names = Object.keys(realToPseudo).sort((a, b) => b.length - a.length);
+  let out = text;
+  names.forEach(name => {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp("\\b" + esc + "\\b", "g"), realToPseudo[name]);
+  });
+  return out;
 }
 
-export function reidentify(input, pseudoToReal, { fields = [] } = {}) {
-  const pseudonyms = [...pseudoToReal.keys()];
-  const replacers = pseudonyms.map((p) => ({ re: nameRegex(p), real: pseudoToReal.get(p) }));
-
-  const replaceInString = (s) => {
-    let out = s;
-    for (const { re, real } of replacers) out = out.replace(re, real);
-    return out;
-  };
-
-  if (typeof input === "string") return replaceInString(input);
-
-  if (Array.isArray(input)) {
-    return input.map((row) => reidentify(row, pseudoToReal, { fields }));
-  }
-
-  if (input && typeof input === "object") {
-    const copy = { ...input };
-    for (const key of fields) {
-      if (!(key in copy) || copy[key] == null) continue;
-      copy[key] = replaceInString(String(copy[key]));
-    }
-    return copy;
-  }
-
-  return input;
+function reidentifyText(text, pseudoToReal) {
+  const pseudos = Object.keys(pseudoToReal).sort((a, b) => b.length - a.length);
+  let out = text;
+  pseudos.forEach(p => {
+    const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp("\\b" + esc + "\\b", "g"), pseudoToReal[p]);
+  });
+  return out;
 }
 
-export function findPupilNamesInText(text, pupilNames) {
-  const hits = new Set();
-  for (const n of pupilNames) {
-    const norm = normalizeName(n);
-    if (!norm) continue;
-    if (nameRegex(norm).test(text)) hits.add(norm);
-  }
-  return [...hits];
-}
+// ===== Wire up UI =====
+const namesEl = document.getElementById("names-input");
+const timetableEl = document.getElementById("timetable-input");
+const runBtn = document.getElementById("run-btn");
+const reidBtn = document.getElementById("reid-btn");
+
+const nameCountEl = document.getElementById("name-count");
+const anonOut = document.getElementById("anonymised-output");
+const mapOut = document.getElementById("mapping-output");
+const reidOut = document.getElementById("reidentified-output");
+
+let currentMap = null;
+
+// Disable reidentify until we have a map
+reidBtn.disabled = true;
+
+// Update counter live (optional)
+namesEl.addEventListener("input", () => {
+  const n = getNames(namesEl.value).length;
+  nameCountEl.textContent = n > 0 ? `✓ ${n} names detected` : "";
+  runBtn.disabled = n === 0;
+});
+
+// Run anonymiser
+runBtn.addEventListener("click", () => {
+  const names = getNames(namesEl.value);
+  if (names.length === 0) return;
+
+  currentMap = buildMap(names);
+
+  // Show mapping
+  mapOut.textContent = currentMap.names
+    .map((name, i) => `Anon-${String(i + 1).padStart(2, "0")} → ${name}`)
+    .join("\n");
+
+  // Anonymise timetable text
+  const anonymised = anonymiseText(timetableEl.value, currentMap.realToPseudo);
+  anonOut.textContent = anonymised;
+
+  // Enable reidentify
+  reidBtn.disabled = false;
+});
+
+// Reidentify from the anonymised box
+reidBtn.addEventListener("click", () => {
+  if (!currentMap) return;
+  const reid = reidentifyText(anonOut.textContent, currentMap.pseudoToReal);
+  reidOut.textContent = reid;
+});

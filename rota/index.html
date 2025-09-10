@@ -94,29 +94,35 @@
 <br>Wednesday: 2:15–3:00: Topic work – Charlotte, Harry and Isla  
 <br>Thursday 12:00–12:15: Reading – paired support for Leo and Ava  
 <br>Friday 9:00–9:20: Assembly – whole class, with support for Emily if available</p>
-  <label><strong>Pupil names (one per line)</strong></label>
-  <textarea data-names rows="6" placeholder="Alice Morgan
+  <label for="names-input"><strong>Pupil names (one per line)</strong></label>
+  <textarea id="names-input" rows="10" placeholder="Alice Morgan
 Ben Shah
 Chloe O'Neill"></textarea>
+<div id="name-count" aria-live="polite">
 
-  <label><strong>Sample text</strong></label>
-  <textarea data-input rows="4" placeholder="09:20 Spelling – Group: Alice Morgan, Ben Shah"></textarea>
+</div>
 
-  <a class="see-more" id="anon-btn" data-go>Anonymise → Reidentify</a>
+  <label for="timetable-input"><strong>Timetable text</strong></label>
+  <textarea id="timetable-input" rows="8" placeholder="09:20 Spelling – Group: Alice Morgan, Ben Shah"></textarea>
 
-  <div class="grid-two">
+  <button id="run-btn" class="see-more" disabled>Run anonymiser</button>
+  <button id="reid-btn" class="see-more" disabled>Reidentify (teacher view)</button>
+
+<div class="grid-two">
     <div>
-      <label><strong>Anonymised</strong></label>
-      <textarea data-output-anon rows="4" readonly></textarea>
-    </div>
-    <div>
-      <label><strong>Reidentified (teacher view)</strong></label>
-      <textarea data-output-reid rows="4" readonly></textarea>
+  <h3>Anonymised</h3>
+  <pre id="anonymised-output" aria-live="polite">
+Your anonymised name list will<br>appear here.
+  </pre>
+</div>
+<div>
+      <h3>Reidentified</h3>
+<pre id="reidentified-output" aria-live="polite">This is what the teacher will see when they reidentify their data.</pre>
     </div>
   </div>
 
-  <label><strong>Mapping</strong></label>
-  <textarea data-output-map rows="5" readonly></textarea>
+  <h3>Name mapping</h3>
+<pre id="mapping-output">This will display the anonymous names map<br>that will be stored in browser ready for<br>reidentification.</pre>
 </section>
 <p><a href="../index.html" aria-label="Back to ChalkboardAI home" class="see-more">← Back to home</a></p>
   </main>

@@ -219,6 +219,19 @@ button.see-more:focus-visible { background-color: #008f68; }
   padding: 10px 20px;
 }
 
+#run-btn {
+  margin: 12px auto 3px auto;
+  max-width: fit-content;
+  display: block;
+
+}
+
+#reid-btn {
+  margin: 3px auto 12px auto;
+  max-width: fit-content;
+  display: block;
+}
+
 /* =========================================
    8) Cards / Sections
    ========================================= */
@@ -357,6 +370,7 @@ input, textarea { width: 250px; max-width: 100%; }
 
 #rota-logo {
   text-align: left;
+  aspect-ratio: 8/2;
   max-width: 400px;
   margin: 0 0 20px 0;
 }
