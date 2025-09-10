@@ -56,17 +56,47 @@
   </header>
 
   <main id="main" class="container" style="padding:2rem 0;">
-    <h1>Rota <span style="opacity:.7;font-weight:600;">— Coming soon</span></h1>
-    <p>Intervention timetabling that respects your real day: sessions, staffing, and fixed commitments — all with local, privacy-first logic.</p>
-
+    <img src="../images/rota-logo.png" id="rota-logo">
+    <h1>In Development</h1>
+    <p>ChalkboardRota is the first tool I’m building in the ChalkboardAI suite. Right now you can try a simple in-browser anonymisation demo below — the foundation that keeps all pupil data secure and local to your device.</p>
+    <p>The finished version will go much further:</p>
     <ul>
-      <li>Upload a timetable; tag staffing availability</li>
-      <li>Fix mandatory interventions (EHCPs) as constraints</li>
-      <li>Get an anonymised draft rota you can export</li>
+      <li>Upload your class timetable and tag staffing availability</li>
+      <li>Fix mandatory interventions (EHCPs/PLPs) as constraints</li>
+      <li>Generate a draft rota that balances sessions, staffing, and pupil needs — all anonymised, ready to export</li>
     </ul>
+    <p>This page will update as new features are added. For now, the anonymisation demo shows the privacy-first logic at the heart of the tool.</p>
 
     <p style="margin-top:1rem;">Want to try it first? <a href="../contact-me/index.html">Get in touch</a>.</p>
     <p><a href="../index.html" aria-label="Back to ChalkboardAI home">← Back to home</a></p>
+<section id="anon-demo" class="card">
+  <h3>In-browser anonymisation (demo)</h3>
+  <p class="muted">No data is uploaded. All processing happens in your browser.</p>
+
+  <label><strong>Pupil names (one per line)</strong></label>
+  <textarea data-names rows="6" placeholder="Alice Morgan
+Ben Shah
+Chloe O'Neill"></textarea>
+
+  <label><strong>Sample text</strong></label>
+  <textarea data-input rows="4" placeholder="09:20 Spelling – Group: Alice Morgan, Ben Shah"></textarea>
+
+  <a class="see-more" id="anon-btn" data-go>Anonymise → Reidentify</a>
+
+  <div class="grid-two">
+    <div>
+      <label><strong>Anonymised</strong></label>
+      <textarea data-output-anon rows="4" readonly></textarea>
+    </div>
+    <div>
+      <label><strong>Reidentified (teacher view)</strong></label>
+      <textarea data-output-reid rows="4" readonly></textarea>
+    </div>
+  </div>
+
+  <label><strong>Mapping</strong></label>
+  <textarea data-output-map rows="5" readonly></textarea>
+</section>
   </main>
 
   <footer class="container" style="padding:2rem 0;opacity:.8;">
@@ -75,5 +105,7 @@
     <p>© ChalkboardAI. Privacy-first by design.</p>
   </footer>
 <script src="../script.js"></script>
+<script type="module" src="../anonymiser-demo.js"></script>
+<script type="module" src="../anonymiser.js"></script>
 </body>
 </html>
