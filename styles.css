@@ -241,6 +241,43 @@ button.see-more:focus-visible { background-color: #008f68; }
   .tool-card  { flex: 1; }
 }
 
+.quotebox {
+    display:flex;
+    flex-direction: column;
+    justify-content:center;
+    max-width: 500px;
+    margin: 3rem auto;
+    background: #e0f7f1;
+    color: #003b2e;
+    font-size: 15px;
+    line-height: 1.2;
+    border: 2px solid #00a97a;
+    padding: 10px
+}
+
+.quotebox p {
+    margin: 0;
+    flex: 1 1 auto;
+    font-style: italic;
+    font-weight: 500; 
+}
+
+.quotebox blockquote {
+    font-weight: bold;
+    padding: 6px;
+    margin: 0;
+}
+
+.quotebox .by {
+    padding: 6px;
+    font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 400;
+    display: block;
+    margin-top: .5rem;
+    color: #007c63;
+}
+
 /* =========================================
    9) Forms
    ========================================= */
@@ -267,8 +304,12 @@ input, textarea { width: 250px; max-width: 100%; }
    ========================================= */
 .icon {
   height: 50px;
-  margin: 10px auto 0 auto;
+  margin: 10px auto 10px auto;
   display: block;
+}
+
+#privacy-footer {
+  font-style: italic;
 }
 
 /* =========================================
