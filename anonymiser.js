@@ -75,7 +75,7 @@ runBtn.addEventListener("click", () => {
 
   // Show mapping
   mapOut.textContent = currentMap.names
-    .map((name, i) => `Anon-${String(i + 1).padStart(2, "0")} → ${name}`)
+    .map((name, i) => `Pupil-${String(i + 1).padStart(2, "0")} → ${name}`)
     .join("\n");
 
   // Anonymise timetable text
