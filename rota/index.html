@@ -56,7 +56,10 @@
   </header>
 
   <main id="main" class="container" style="padding:2rem 0;">
-    <img src="../images/rota-logo.png" id="rota-logo">
+    <div id="rota-mini-header">
+      <img src="../images/rota-logo.png" id="rota-logo">
+      <a href="#anon-demo" class="see-more" id="jump-to-rota">Jump to the Rota Tool</a>
+    </div>
     <h1>In Development</h1>
     <p>ChalkboardRota is the first tool I’m building in the ChalkboardAI suite. Right now you can try the first draft of a simple in-browser anonymisation demo below — the foundation that keeps all pupil data secure and local to your device.</p>
     <p>The finished version will go much further:</p>
@@ -67,7 +70,7 @@
     </ul>
     <p>This page will update as new features are added. For now, the anonymisation demo shows the privacy-first logic at the heart of the tool.</p>
 
-<section id="anon-demo" class="card">
+<section id="anon-demo" class="card tool-blurb">
   <h1>In-browser anonymisation (demo)</h1>
   <h2>How to try the demo</h2>
     <ol>
@@ -84,7 +87,7 @@
   <p class="muted">No data is uploaded. All processing happens in your browser.</p>
   <h3>Sample text:</h3>
   <h4>Pupil names input area:</h4>
-  <p>Amelia, Jack, Sophie, Oliver, Mia, Noah, Grace, Ethan, Charlotte, Harry, Isla, Leo, Ava, Emily</p>
+  <p>Amelia<br>Jack<br>Sophie<br>Oliver<br>Mia<br>Noah<br>Grace<br>Ethan<br>Charlotte<br>Harry<br>Isla<br>Leo<br>Ava<br>Emily</p>
   <h4>Sample text input area:</h4>
   <p>Monday: 9:20–9:40: Spelling with Amelia and Jack<br>9:40–10:45: Writing – support for Sophie, Oliver and Mia  
 <br>Tuesday: 11:00–12:00: Maths intervention with Noah<br>1:15–1:45: Number Sense – guided group with Grace and Ethan  
@@ -115,9 +118,11 @@ Chloe O'Neill"></textarea>
   <label><strong>Mapping</strong></label>
   <textarea data-output-map rows="5" readonly></textarea>
 </section>
+<p><a href="../index.html" aria-label="Back to ChalkboardAI home" class="see-more">← Back to home</a></p>
   </main>
 
   <footer class="container" style="padding:2rem 0;opacity:.8;">
+    
     <img src="../images/icon-transparent.png" alt="ChalkboardAI Icon" class="icon">
      <small id="privacy-footer">Privacy-first by design · GDPR-friendly · Built by a teacher</small>
     <p>© ChalkboardAI. Privacy-first by design.</p>

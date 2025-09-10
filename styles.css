@@ -74,6 +74,11 @@ header.container { padding: 1.25rem 0; }
   object-position: center;
 }
 
+#rota-mini-header {
+  display: flex;
+  justify-content: space-around;
+}
+
 /* =========================================
    5) Navbar (full-bleed bar + centred links)
    ========================================= */
@@ -206,6 +211,13 @@ a.see-more {
 }
 button.see-more:hover,
 button.see-more:focus-visible { background-color: #008f68; }
+
+#jump-to-rota {
+  text-align: center;
+  max-height: fit-content;
+  margin-top: 30px;
+  padding: 10px 20px;
+}
 
 /* =========================================
    8) Cards / Sections
