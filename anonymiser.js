@@ -35,7 +35,7 @@ function nameRegex(fullName) {
 }
 
 export function buildPseudonymMaps(pupilNames, options = {}) {
-  const { scheme = "Anon-###", startAt = 1, seed = 12345 } = options;
+  const { scheme = "Pupil-###", startAt = 1, seed = null } = options;
 
   const seen = new Set();
   let clean = [];
@@ -59,7 +59,7 @@ export function buildPseudonymMaps(pupilNames, options = {}) {
       const cycle = Math.floor(i / greek.length) + 1;
       return `${base}-${cycle}`;
     }
-    return `Anon-${num}`;
+    return `Pupil-${num}`;
   };
 
   const realToPseudo = new Map();

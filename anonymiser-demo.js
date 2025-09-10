@@ -34,9 +34,9 @@ function initDemo(rootId = "anon-demo") {
   goBtn.addEventListener("click", () => {
     const names = parseNames(namesEl.value);
     const { realToPseudo, pseudoToReal, list } = buildPseudonymMaps(names, {
-      scheme: "Anon-###",
+      scheme: "Pupil-###",
       startAt: 1,
-      seed: 4242,
+      seed: 0,
     });
 
     const text = inputEl.value;

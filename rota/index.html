@@ -58,7 +58,7 @@
   <main id="main" class="container" style="padding:2rem 0;">
     <img src="../images/rota-logo.png" id="rota-logo">
     <h1>In Development</h1>
-    <p>ChalkboardRota is the first tool I’m building in the ChalkboardAI suite. Right now you can try a simple in-browser anonymisation demo below — the foundation that keeps all pupil data secure and local to your device.</p>
+    <p>ChalkboardRota is the first tool I’m building in the ChalkboardAI suite. Right now you can try the first draft of a simple in-browser anonymisation demo below — the foundation that keeps all pupil data secure and local to your device.</p>
     <p>The finished version will go much further:</p>
     <ul>
       <li>Upload your class timetable and tag staffing availability</li>
@@ -67,10 +67,20 @@
     </ul>
     <p>This page will update as new features are added. For now, the anonymisation demo shows the privacy-first logic at the heart of the tool.</p>
 
-    <p style="margin-top:1rem;">Want to try it first? <a href="../contact-me/index.html">Get in touch</a>.</p>
-    <p><a href="../index.html" aria-label="Back to ChalkboardAI home">← Back to home</a></p>
 <section id="anon-demo" class="card">
-  <h3>In-browser anonymisation (demo)</h3>
+  <h1>In-browser anonymisation (demo)</h1>
+  <h2>How to try the demo</h2>
+    <ol>
+      <li>Copy the sample text below and paste it into the input box.</li>
+      <li>Click <b>Anonymise → Reidentify</b>.</li>
+      <li>You’ll see three things appear:</li>
+      <ul>
+        <li>An anonymised version of your timetable.</li>
+        <li>A reidentified version, restoring the original names.</li>
+        <li>A name mapping table, showing which anonymised label links to which pupil.</li>
+      </ul>
+    </ol>
+  <p>Right now the tool just demonstrates the anonymisation and reidentification steps. In the finished version, an AI planning stage will sit in between – using the anonymised data to build an intervention rota, before names are safely reattached at the end.</p>
   <p class="muted">No data is uploaded. All processing happens in your browser.</p>
 
   <label><strong>Pupil names (one per line)</strong></label>
