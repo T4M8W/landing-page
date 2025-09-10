@@ -14,7 +14,7 @@ function buildMap(names) {
   const realToPseudo = {};
   const pseudoToReal = {};
   names.forEach((name, i) => {
-    const pseudo = "Anon-" + String(i + 1).padStart(2, "0");
+    const pseudo = "Pupil-" + String(i + 1).padStart(2, "0");
     realToPseudo[name] = pseudo;
     pseudoToReal[pseudo] = name;
   });
