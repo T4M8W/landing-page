@@ -193,7 +193,9 @@ a:focus-visible {
 .ignore { color: #111111; text-decoration: none; padding: 0; display: inline-block; }
 a.ignore:hover, a.ignore:focus-visible { text-decoration: underline; }
 
-button.see-more {
+button.see-more,
+a.see-more {
+  display: inline-block;
   background-color: #00a97a;
   color: white;
   border: none;
@@ -208,12 +210,17 @@ button.see-more:focus-visible { background-color: #008f68; }
 /* =========================================
    8) Cards / Sections
    ========================================= */
-.intro { border: 2px solid #00a97a; margin: 40px 0; }
+.intro { 
+  margin: 40px 0 20px 0; 
+}
+#tools {
+  margin-bottom: 10px;
+}
 .tool-blurb {
   border: 2px solid #00a97a;
   border-radius: 8px;
   padding: 20px;
-  margin: 20px 20px;
+  margin: 10px 20px 40px 20px;
   background-color: #f0fdfa;
   display: block;
 }
