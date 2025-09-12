@@ -408,8 +408,8 @@ input, textarea { width: 250px; max-width: 100%; }
   }
 }
 #anon-demo {
-  max-width: 200pxpx;
-  margin: 1.5rem auto;
+  max-width: 950px;
+  margin: 1.5rem 20px;
 }
 
 .card {
