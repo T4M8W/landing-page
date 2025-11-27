@@ -7,7 +7,7 @@
   from = "/api/suggest-groups"
 
   # Netlify will route it here:
-  to = "/.netlify/functions/suggest-groups"
+  to = "/.netlify/functions/suggestGroups"
 
   status = 200
   force = true
