@@ -15,7 +15,7 @@
 <body>
     <header class="container" style="padding:1.25rem 0;">
         <a href="#main" class="skip">Skip to main content</a>
-        <a href="index.html" class="logo-link">
+        <a href="../index.html" class="logo-link">
             <div class="logo-crop">
                 <picture>
                     <source type="image/webp"
@@ -42,18 +42,34 @@
                 The Tools
             </button>
             <div class="dropdown-content" id="dropdown-content" role="menu">
+                <a href="/groups/index.html" role="menuitem">Groups (Prototype)</a>
                 <a href="../rota/index.html" role="menuitem">Rota</a>
                 <a href="../provision-mapper/index.html" role="menuitem">Provision Mapper</a>
                 <a href="../reports/index.html" role="menuitem">Reports</a>
             </div>
             </li>
-            <li><a href="../the-approach/index.html">The Approach</a></li>
-            <li><a href="../about-me/index.html">About Me</a></li>
-            <li><a href="../contact-me/index.html">Contact Me</a></li>
+            <li><a class="white" href="../the-approach/index.html">The Approach</a></li>
+            <li><a class="white" href="../about-me/index.html">About Me</a></li>
+            <li><a class="white" href="../contact-me/index.html">Contact Me</a></li>
         </ul>
     </nav>
     </header>
     <main id="main" class="main">
+  <h1>Groups Tool Prototype</h1>
+  <h3>About This Prototype </h3>
+      <p>This early proof-of-concept of the Groups tool shows how ChalkboardAI will anonymise class data and use AI to suggest pupil groupings.</p>
+      <p><strong>Please only upload sample or dummy data.</strong></p>
+      <p>This version is for demonstration only.</p>
+      <h3>You can test:</h3>
+      <p>
+        <ul>
+          <li>Uploading a class list</li>
+          <li>Automatic anonymisation</li>
+          <li>AI generated grouping settings</li>
+          <li>Switching between anonymised and real names</li>
+        </ul>
+      </p>
+      <h3>A full, secure, school-ready version is in development.</h3>
       <div class="tool-blurb" class="tool-blurb" style="max-width: 900px; margin-top: 2rem;">
         <input type="file" id="upload"/>
         <button id="check-names">Check for Names</button>
@@ -79,6 +95,7 @@
     <img src="Icon transparent.png" alt="Chalkboard icon" style="height: 40px; margin-top: 2rem;" />
   </footer>
 
+  <script src="/script.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="script.js"></script>
 </body>

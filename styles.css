@@ -178,7 +178,7 @@ nav.navbar ul {
    7) Links & Buttons
    ========================================= */
 a {
-  color: white;
+  color: #111111;
   text-decoration: none;
   padding: 14px 20px;
   display: inline-block;
@@ -235,6 +235,10 @@ button:disabled {
   opacity: 0.5;        /* fade the button */
   cursor: not-allowed; /* show a "blocked" cursor */
   filter: grayscale(30%); /* optional: dull the colour a bit */
+}
+
+.white {
+  color: #F7F9F8;
 }
 
 /* =========================================
