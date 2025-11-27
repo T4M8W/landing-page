@@ -321,6 +321,12 @@ button:disabled {
   border-radius: 8px;
 }
 
+#uploader-box {
+  margin: 0 auto;
+  display: block;
+}
+
+
 /* =========================================
    9) Forms
    ========================================= */
