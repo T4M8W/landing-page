@@ -1,0 +1,13 @@
+[build]
+  # This tells Netlify where your serverless functions live
+  functions = "netlify/functions"
+
+[[redirects]]
+  # Frontend will call this:
+  from = "/api/suggest-groups"
+
+  # Netlify will route it here:
+  to = "/.netlify/functions/suggest-groups"
+
+  status = 200
+  force = true

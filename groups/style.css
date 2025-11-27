@@ -1,0 +1,182 @@
+/* Import Nunito font from Google */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: #10211d; /* ChalkboardAI dark green background */
+  color: #e5e2d4; /* Chalk white */
+  padding: 2rem;
+  line-height: 1.6;
+}
+
+/* Container to centre everything */
+#container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Header with logo and title */
+header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+header img {
+  height: 60px;
+  margin-right: 1rem;
+}
+
+header h1 {
+  font-size: 2rem;
+  color: #e5e2d4;
+  font-weight: 600;
+}
+
+#main-logo {
+  height: 440px;         /* Try 180–220px for impact */
+  max-width: 100%;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+
+/* Controls: file upload + buttons */
+#controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+button, input[type="file"] {
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+button {
+  background-color: #88b9a2; /* Sage green */
+  color: #10211d; /* Dark chalkboard text */
+}
+
+button:hover {
+  background-color: #6ea08c;
+}
+
+input[type="file"] {
+  background-color: #ffffff;
+  color: #10211d;
+}
+
+/* Table styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background-color: #e5e2d4; /* Chalk white background */
+  color: #10211d;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+}
+
+th {
+  background-color: #88b9a2;
+  color: #10211d;
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* Highlighted/error cells */
+td.highlight {
+  background-color: #ffdddd; /* soft red */
+  color: #a00;
+  font-weight: bold;
+}
+
+/* Results text */
+#results {
+  margin-top: 1.5rem;
+  font-style: italic;
+  color: #e5e2d4;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  body {
+    padding: 1rem;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  table, th, td {
+    font-size: 0.9rem;
+  }
+}
+#group-suggestions {
+  max-width: 90%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin: auto;
+}
+body {
+  overflow-x: hidden;
+}
+#container {
+  max-width: 100%;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+#group-suggestions {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.6;
+  padding: 1em;
+  background-color: #1f1f1f;
+  color: #fff;
+  border-radius: 10px;
+  margin-top: 1rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
