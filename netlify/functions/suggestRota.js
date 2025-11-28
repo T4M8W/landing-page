@@ -1,7 +1,5 @@
 // netlify/functions/suggestRota.js
 
-const fetch = require("node-fetch"); // if you already use this in suggestGroups, keep it consistent
-
 exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
     return {
