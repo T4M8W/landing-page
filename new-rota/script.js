@@ -71,18 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       if (planOutput) {
-  let planText = data.plan || "No plan text returned from backend.";
-
-  // Reidentify any pseudonyms in the plan text
-  for (const [pseudo, realName] of Object.entries(pseudoToReal)) {
-    // Simple global replace – fine for prototype
-    const regex = new RegExp(`\\b${pseudo}\\b`, "g");
-    planText = planText.replace(regex, realName);
-  }
-
-  planOutput.textContent = planText;
-}
-
+        planOutput.textContent = data.plan || "No plan text returned from backend.";
+      }
 
       if (planStatus) {
         planStatus.textContent = "Intervention plan generated (prototype).";
@@ -468,9 +458,8 @@ const TIMETABLE_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 // Support states for each session cell (cycles on click)
 const SUPPORT_STATES = [
-  { key: "unset",    label: "No tag",       emoji: ""    },
-  { key: "no_support", label: "No support",   emoji: "🌸" },
-  { key: "partial",  label: "Partial support", emoji: "🟡" },
+  { key: "unset",    label: "No support",       emoji: ""    },
+  { key: "partial",  label: "Teacher flexible", emoji: "🟡" },
   { key: "one_adult", label: "1 adult",      emoji: "🟢" },
   { key: "two_plus", label: "2+ adults",     emoji: "🔵" }
 ];
@@ -554,14 +543,6 @@ const SAMPLE_TIMETABLE = [
   { id: "fri_pm2",      day: "Fri", start: "14:15", end: "15:00", label: "Afternoon Session 2" },
   { id: "fri_reader",   day: "Fri", start: "15:00", end: "15:20", label: "Class Reader" }
 ];
-
-// -----------------------------------------------------
-// TIMETABLE RENDERING (simple version)
-// -----------------------------------------------------
-
-// -----------------------------------------------------
-// TIMETABLE RENDERING – GRID VIEW
-// -----------------------------------------------------
 
 // -----------------------------------------------------
 // TIMETABLE RENDERING – GRID VIEW WITH CLICKABLE CELLS
@@ -743,8 +724,3 @@ function buildRotaPayload() {
 
   return payload;
 }
-
-
-// -----------------------------------------------------
-// End of manual anonymisation flow
-// -----------------------------------------------------
