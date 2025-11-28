@@ -71,8 +71,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       if (planOutput) {
-        planOutput.textContent = data.plan || "No plan text returned from backend.";
-      }
+  let planText = data.plan || "No plan text returned from backend.";
+
+  // Reidentify any pseudonyms in the plan text
+  for (const [pseudo, realName] of Object.entries(pseudoToReal)) {
+    // Simple global replace – fine for prototype
+    const regex = new RegExp(`\\b${pseudo}\\b`, "g");
+    planText = planText.replace(regex, realName);
+  }
+
+  planOutput.textContent = planText;
+}
+
 
       if (planStatus) {
         planStatus.textContent = "Intervention plan generated (prototype).";
@@ -85,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 }
+
 
   if (loadTimetableButton) {
     loadTimetableButton.addEventListener("click", () => {

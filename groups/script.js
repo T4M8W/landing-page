@@ -32,28 +32,22 @@ function normaliseSupportTerms(text) {
   return text;
 }
 
-const hardcodedNames = [
-  // Boys
-  'Aaron', 'Adam', 'Alex', 'Alfie', 'Archie', 'Ben', 'Billy', 'Charlie', 'Connor', 'Daniel',
-  'David', 'Dylan', 'Edward', 'Eli', 'Ethan', 'Felix', 'Finley', 'Freddie', 'George', 'Harry',
-  'Harvey', 'Henry', 'Hugo', 'Isaac', 'Jack', 'Jacob', 'Jake', 'James', 'Jayden', 'Joe',
-  'Joel', 'John', 'Joseph', 'Joshua', 'Leo', 'Lewis', 'Liam', 'Logan', 'Luca', 'Luke',
-  'Mason', 'Matthew', 'Max', 'Michael', 'Nathan', 'Noah', 'Oliver', 'Oscar', 'Reuben',
-  'Riley', 'Robert', 'Ryan', 'Samuel', 'Sebastian', 'Sonny', 'Theo', 'Thomas', 'Toby',
-  'Tyler', 'William', 'Zachary',
+const BASE_NAME_LIST = window.CHBOARD_NAME_LIST || [];
 
-  // Girls
-  'Abigail', 'Alice', 'Amelia', 'Ava', 'Bella', 'Charlotte', 'Chloe', 'Daisy', 'Ella', 'Ellie',
-  'Emily', 'Emma', 'Erin', 'Evie', 'Faith', 'Florence', 'Freya', 'Grace', 'Hannah', 'Harper',
-  'Holly', 'Imogen', 'Isabel', 'Isabella', 'Isla', 'Ivy', 'Jessica', 'Katie', 'Lacey', 'Layla',
-  'Lily', 'Lola', 'Lucy', 'Matilda', 'Megan', 'Mia', 'Millie', 'Molly', 'Nancy', 'Olivia',
-  'Phoebe', 'Poppy', 'Rosie', 'Ruby', 'Scarlett', 'Sienna', 'Sophie', 'Summer', 'Willow',
-  'Zara',
+// When building your "names to check" list:
+function buildNamesToCheck(pupilData) {
+  const namesToCheck = new Set(BASE_NAME_LIST);
 
-  // Unisex/Common modern names
-  'Alex', 'Bailey', 'Charlie', 'Drew', 'Elliot', 'Finley', 'Frankie', 'Harley', 'Jamie',
-  'Jayden', 'Jesse', 'Jordan', 'Morgan', 'Riley', 'Rowan', 'Taylor'
-];
+  // Add names from the pupil column too
+  pupilData.forEach(row => {
+    if (row.pupilName) {
+      namesToCheck.add(row.pupilName.trim());
+    }
+  });
+  
+  return Array.from(namesToCheck);
+}
+
 function displayTable(data, headers) {
   const table = document.createElement('table');
   const thead = table.createTHead();
