@@ -328,9 +328,8 @@ Create [X] groups of [Y] pupils based on the following principles. Briefly expla
 4. Do not group pupils with known incompatibilities (e.g. "Pupil 9 and Pupil 10 must not be in the same group").
 5. Respect any explicit teacher notes in the comments field.
 6. Do **not** create groups based purely on “a mix” — every group must have a clear rationale for learning.
-7. Some pupils may appear in more than one group where appropriate — for example, if they require additional support or act as effective peer models. Avoid unnecessary duplication, but allow it when educationally justified.
-8. Do not assume that pupils with additional needs (e.g. EHCPs, ASD, SEMH) are suited to support others. These pupils should not be framed as peer supporters unless explicitly indicated in the teacher notes.
-9. Do not place pupils in more than one group.
+7. Do not assume that pupils with additional needs (e.g. EHCPs, ASD, SEMH) are suited to support others. These pupils should not be framed as peer supporters unless explicitly indicated in the teacher notes.
+8. Do not place pupils in more than one group.
 
 After forming the groups, write a short explanation for each group. Each explanation should:
 - Focus on **pedagogical purpose** (e.g. pairing strengths and areas of need)

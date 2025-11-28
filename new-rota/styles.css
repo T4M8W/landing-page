@@ -1,0 +1,19 @@
+.timetable-grid .timetable-cell {
+  cursor: pointer;
+  vertical-align: top;
+  padding: 0.4rem;
+}
+
+.timetable-grid .timetable-cell .session-label {
+  font-weight: 500;
+}
+
+.timetable-grid .support-indicator {
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+  opacity: 0.9;
+}
+
+.timetable-grid .empty-cell {
+  background: rgba(0,0,0,0.02);
+}
