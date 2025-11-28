@@ -186,7 +186,7 @@ function performNameCheck() {
   }
 
   nameColumnKey = detectNameColumn(fields);
-
+    console.log("Detected name column:", nameColumnKey);
   if (!nameColumnKey) {
     updateStatus(
       "I couldn't detect a name column. " +
@@ -199,7 +199,7 @@ function performNameCheck() {
   }
 
   const flaggedCells = findUnexpectedNames(nameColumnKey);
-
+  console.log("Flagged cells:", flaggedCells);
   if (flaggedCells.length === 0) {
     nameCheckPassed = true;
     enableButton("anonymiseButton", true);
