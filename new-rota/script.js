@@ -113,17 +113,30 @@ document.addEventListener("DOMContentLoaded", () => {
           throw new Error(`HTTP ${response.status}`);
         }
 
-        const data = await response.json();
+              const data = await response.json();
 
-        // Store anonymised + real versions
-        currentPlanAnon = data.plan || "No plan text returned from backend.";
-        currentPlanReal = reidentifyText(currentPlanAnon);
-        showingRealPlan = false;
+      // Store anonymised + real versions
+      currentPlanAnon = data.plan || "No plan text returned from backend.";
+      currentPlanReal = reidentifyText(currentPlanAnon);
+      showingRealPlan = false;
 
-        if (planOutput) {
-          // Show anonymised version by default
-          planOutput.textContent = currentPlanAnon;
-        }
+      if (planOutput) {
+        // Show anonymised version by default
+        planOutput.textContent = currentPlanAnon;
+      }
+
+      if (planStatus) {
+        planStatus.textContent = "Intervention plan generated (prototype).";
+      }
+
+      // 🔑 Enable the toggle button *here*
+      const toggleBtn = document.getElementById("togglePlanNamesButton");
+      console.log("Enabling toggle button:", toggleBtn);
+      if (toggleBtn) {
+        toggleBtn.disabled = false;              // or toggleBtn.removeAttribute("disabled");
+        toggleBtn.textContent = "Show real pupil names";
+      }
+
 
         if (planStatus) {
           planStatus.textContent = "Intervention plan generated (prototype).";
