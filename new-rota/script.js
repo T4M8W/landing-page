@@ -362,7 +362,7 @@ function buildPseudonymMaps(nameCol) {
 
   let counter = 1;
   for (const realName of uniqueNames) {
-    const pseudo = `Anon-${counter}`;
+    const pseudo = `Pupil ${counter}`;
     realToPseudo[realName] = pseudo;
     pseudoToReal[pseudo] = realName;
     counter++;
