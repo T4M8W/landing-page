@@ -291,8 +291,35 @@ function detectNameColumn(fields) {
 }
 
 // Scan for any cells outside the main name column that exactly match a pupil name.
-function findUnexpectedNames(nameCol) {
+function findUnexpectedNames(nameColumnKey) {
   const flagged = [];
+
+  originalRows.forEach((row, rowIndex) => {
+    const rowNumber = rowIndex + 1; // 1-based for user display
+
+    Object.keys(row).forEach((columnKey) => {
+      if (columnKey === nameColumnKey) return; // skip the main name column
+
+      const rawValue = row[columnKey];
+      if (!rawValue) return;
+
+      const cellValue = String(rawValue).trim();
+
+      // Debug (optional – comment out later)
+      // console.log(`Row ${rowNumber}, Col "${columnKey}": "${cellValue}" ->`, isName(cellValue));
+
+      if (isName(cellValue)) {
+        flagged.push({
+          rowNumber,
+          columnKey,
+          value: cellValue
+        });
+      }
+    });
+  });
+
+  return flagged;
+}
 
   // Build a set of all pupil names in the name column
   const pupilNames = new Set();
