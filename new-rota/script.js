@@ -13,6 +13,48 @@
 
 // ---------- Global state ----------
 
+// Top 100 UK Baby Names (ONS 2023) – 50 boys + 50 girls
+const COMMON_NAMES = [
+  // Boys
+  "Noah", "Oliver", "George", "Arthur", "Muhammad",
+  "Leo", "Harry", "Oscar", "Henry", "Theo",
+  "Freddie", "Jack", "Charlie", "Thomas", "Finley",
+  "Jacob", "Arlo", "Archie", "Jude", "Teddy",
+  "Alfie", "Louie", "Lucas", "Isaac", "Tommy",
+  "Alexander", "James", "Roman", "Elijah", "Edward",
+  "Jaxon", "Reggie", "Theo", "Joshua", "Adam",
+  "Max", "Luca", "Riley", "Hunter", "Ezra",
+  "Benjamin", "Harrison", "Daniel", "Logan", "Hudson",
+  "Joseph", "Ethan", "Samuel", "David", "Kai",
+
+  // Girls
+  "Olivia", "Amelia", "Isla", "Ava", "Freya",
+  "Lily", "Sophia", "Mia", "Willow", "Rosie",
+  "Grace", "Ivy", "Florence", "Emily", "Elsie",
+  "Poppy", "Evie", "Ella", "Luna", "Sienna",
+  "Charlotte", "Harper", "Millie", "Daisy", "Sofia",
+  "Mila", "Aria", "Maya", "Penelope", "Bonnie",
+  "Hallie", "Ada", "Jessica", "Fatima", "Zara",
+  "Esme", "Eliza", "Chloe", "Ellie", "Maeve",
+  "Emma", "Arabella", "Scarlett", "Lottie", "Thea",
+  "Imogen", "Violet", "Layla", "Evelyn", "Bella"
+];
+
+// Build regex pattern for fast name detection
+const namePattern = new RegExp(
+  "\\b(" + COMMON_NAMES.map(n => n.toLowerCase()).join("|") + ")\\b",
+  "i"
+);
+
+function isName(value) {
+  if (!value) return false;
+
+  const cleaned = value.toLowerCase().trim();
+
+  return namePattern.test(cleaned);
+}
+
+
 let originalRows = [];       // Raw parsed rows from CSV
 let anonymisedRows = [];     // Rows with pseudonyms applied
 let realToPseudo = {};       // { "Alice Smith": "Anon-1", ... }
