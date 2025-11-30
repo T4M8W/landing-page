@@ -321,6 +321,9 @@ function findUnexpectedNames(nameColumnKey) {
   return flagged;
 }
 
+function findUnexpectedNames(nameCol) {
+  const flagged = [];
+
   // Build a set of all pupil names in the name column
   const pupilNames = new Set();
   originalRows.forEach((row) => {
