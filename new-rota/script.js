@@ -183,8 +183,6 @@ function performNameCheck() {
   if (!fields.length) {
     updateStatus("No columns detected. Please check your CSV format.");
     return;
-    console.log("Scanning cell:", cellValue);
-console.log("IsMatch:", isName(cellValue));
   }
 
   nameColumnKey = detectNameColumn(fields);
@@ -230,7 +228,8 @@ console.log("IsMatch:", isName(cellValue));
 
 function detectNameColumn(fields) {
   const lowerFields = fields.map((f) => f.toLowerCase().trim());
-
+    console.log("Fields detected:", fields);
+    console.log("Lowercase fields:", lowerFields);
   // Try direct matches
   for (const candidate of NAME_COLUMN_CANDIDATES) {
     const index = lowerFields.indexOf(candidate);
