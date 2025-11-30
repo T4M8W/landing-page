@@ -133,6 +133,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 }
 
+const togglePlanButton = document.getElementById("togglePlanNamesButton");
+if (togglePlanButton) {
+  togglePlanButton.addEventListener("click", () => {
+    if (!currentPlanAnon) return;
+
+    showingRealPlan = !showingRealPlan;
+
+    if (planOutput) {
+      planOutput.textContent = showingRealPlan ? currentPlanReal : currentPlanAnon;
+    }
+
+    togglePlanButton.textContent = showingRealPlan
+      ? "Show anonymised pupil names"
+      : "Show real pupil names";
+  });
+}
 
   if (loadTimetableButton) {
     loadTimetableButton.addEventListener("click", () => {
