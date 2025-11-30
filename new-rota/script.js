@@ -62,6 +62,10 @@ let pseudoToReal = {};       // { "Anon-1": "Alice Smith", ... }
 let nameColumnKey = null;    // Header of the detected name column
 let nameCheckPassed = false; // Only true after a clean "check for names"
 let showingPseudonyms = true;
+let currentPlanAnon = "";   // AI response with pseudonyms (Pupil 1, etc.)
+let currentPlanReal = "";   // Same response with real names
+let showingRealPlan = false;
+
 
 const NAME_COLUMN_CANDIDATES = [
   "name",
@@ -101,9 +105,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch("/.netlify/functions/suggestRota", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -121,8 +125,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("Error calling suggestRota function:", err);
-      if (planStatus) {
-        planStatus.textContent = "There was a problem generating the plan. Please try again or check the console.";
+    if (planStatus) {
+      planStatus.textContent =
+        "There was a problem generating the plan. Please try again or check the console.";
       }
     }
   });
@@ -425,6 +430,28 @@ function renderTable() {
 }
 
 // ---------- UI helpers ----------
+
+function reidentifyText(text) {
+  if (!text || !pseudoToReal) return text;
+
+  let result = text;
+
+  // Sort to avoid partial overlaps just in case
+  const pseudoKeys = Object.keys(pseudoToReal).sort((a, b) => b.length - a.length);
+
+  pseudoKeys.forEach((pseudo) => {
+    const real = pseudoToReal[pseudo];
+    if (!real) return;
+
+    // Escape regex special chars in the pseudonym
+    const escaped = pseudo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`\\b${escaped}\\b`, "g");
+
+    result = result.replace(regex, real);
+  });
+
+  return result;
+}
 
 function updateStatus(message) {
   const statusBox = document.getElementById("statusBox");
