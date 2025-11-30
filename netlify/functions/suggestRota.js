@@ -11,32 +11,48 @@ exports.handler = async (event, context) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    // Expecting the payload from buildRotaPayload():
-    // { meta, pupils, name_column, timetable }
-    const { pupils, timetable } = body;
+    // Expecting payload like:
+    // { meta, pupils, name_column, timetable, mandatoryInterventions, adultAvailability }
+    const {
+      pupils,
+      timetable,
+      mandatoryInterventions = [],
+      adultAvailability = []
+    } = body;
 
     if (!pupils || !Array.isArray(pupils) || !timetable || !Array.isArray(timetable)) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Invalid payload. Expected pupils[] and timetable[] arrays." })
+        body: JSON.stringify({
+          error: "Invalid payload. Expected pupils[] and timetable[] arrays."
+        })
       };
     }
 
-    // Build a simple text summary for the prompt (keep it small for now)
+    // Build a simple text summary for the prompt (you can reuse later if needed)
     const pupilCount = pupils.length;
 
-    const supportSummary = timetable.map((session) => {
-      return `${session.day} ${session.start}-${session.end} (${session.label}): support = ${session.support_label}`;
-    }).join("\n");
+    const supportSummary = timetable
+      .map((session) => {
+        return `${session.day} ${session.start}-${session.end} (${session.label}): support = ${session.support_label}`;
+      })
+      .join("\n");
+
+    // Try to infer how pupil pseudonyms are stored
+    const pseudonymsPreview = pupils
+      .map((p) => p.name || p["Name"] || p.pupil || p["Pupil"])
+      .filter(Boolean)
+      .slice(0, 8);
 
     const systemPrompt = `
 You are ChalkboardAI Rota, a planning assistant for a UK primary teacher.
+
 You receive:
 - An anonymised list of pupils (no real names)
 - A weekly timetable with tagged support availability
 
-All pupil identifiers are pseudonyms such as ${pseudonyms.slice(0, 8).join(", ")}.
-These are already anonymised. 
+All pupil identifiers are pseudonyms such as ${pseudonymsPreview.join(", ")}.
+These are already anonymised.
 
 IMPORTANT:
 - Always refer to pupils ONLY by these exact pseudonyms.
@@ -44,6 +60,7 @@ IMPORTANT:
 - Do NOT renumber or rename pupils.
 
 Your job is to propose a sensible weekly intervention rota.
+
 Focus on:
 - Using the highest-support slots (2+ adults / 1 adult) for the highest need pupils
 - Avoiding break, lunch and assemblies for interventions
@@ -67,8 +84,8 @@ You will receive:
 • The number of adults available per session
 
 RULES:
-1. You must refer to pupils **only** by the pseudonyms provided in the PUPILS JSON.
-2. You must NOT invent new names or codes (e.g. “Pupil A”, “Student X”, “Child 1”).
+1. You must refer to pupils ONLY by the pseudonyms provided in the PUPILS JSON.
+2. You must NOT invent new names or codes (e.g. "Pupil A", "Student X", "Child 1").
 3. You must NOT renumber or rename any pupil.
 4. Only use the pseudonyms exactly as they appear in the data.
 
@@ -77,21 +94,21 @@ TIMETABLE RULES (REAL SCHOOL CONTEXT)
 -----------------------------------------
 You must follow these constraints when scheduling interventions:
 
-• Interventions can only occur during legitimate in-school sessions.  
-• Avoid scheduling during:  
-  – Break (10:45–11:00)  
-  – Lunch (12:15–13:00)  
-  – Registration (8:40–9:00 and 13:00–13:15)  
-  – Assembly (if marked in the timetable)  
-• Do NOT schedule during specialist subjects unless the timetable clearly indicates flexibility.  
-• Avoid PE unless unavoidable.  
+• Interventions can only occur during legitimate in-school sessions.
+• Avoid scheduling during:
+  – Break (10:45–11:00)
+  – Lunch (12:15–13:00)
+  – Registration (8:40–9:00 and 13:00–13:15)
+  – Assembly (if marked in the timetable)
+• Do NOT schedule during specialist subjects unless the timetable clearly indicates flexibility.
+• Avoid PE unless unavoidable.
 • Avoid Number Sense / Spelling / Maths whole-class teaching unless the grid colour tags explicitly allow support.
 
 If a session is marked as:
-• 🔴 Outside school hours → no interventions allowed.  
-• 🌸 In school, no support available → no interventions allowed.  
-• 🟡 Partial support → 1 pupil maximum.  
-• 🟢 One adult available → small-group intervention allowed (1–3 pupils).  
+• 🔴 Outside school hours → no interventions allowed.
+• 🌸 In school, no support available → no interventions allowed.
+• 🟡 Partial support → 1 pupil maximum.
+• 🟢 One adult available → small-group intervention allowed (1–3 pupils).
 • 🔵 Two or more adults → multiple groups allowed. Only schedule within the adult capacity given.
 
 -----------------------------------------
@@ -108,15 +125,15 @@ RULES:
 INTERVENTION DESIGN PRINCIPLES
 -----------------------------------------
 When building the weekly plan:
-• Sessions should be short, clear, and specific (e.g. 15–20 mins).  
-• Spread support fairly without overloading the same session.  
-• Avoid repeatedly removing the same pupil from the same lesson unless required.  
+• Sessions should be short, clear, and specific (e.g. 15–20 mins).
+• Spread support fairly without overloading the same session.
+• Avoid repeatedly removing the same pupil from the same lesson unless required.
 • Keep the plan realistic for a real classroom: minimal disruption, predictable routine.
 
 When choosing which pupils to group together:
-• Prefer small targeted groups.  
-• Avoid pairing pupils whose notes suggest poor pairing (e.g. “avoid grouping with Row 3”).  
-• Aim for consistency each week.  
+• Prefer small targeted groups.
+• Avoid pairing pupils whose notes suggest poor pairing (e.g. "avoid grouping with Row 3").
+• Aim for consistency each week.
 
 -----------------------------------------
 OUTPUT FORMAT
@@ -126,45 +143,43 @@ Your response must follow this structure:
 ### Weekly Intervention Plan
 
 #### [Day]
-- **[Time] ([Subject])**  
-  - List pupils exactly as given (“Pupil 3 and Pupil 7”)  
+- **[Time] ([Subject])**
+  - List pupils exactly as given (e.g. "Pupil 3 and Pupil 7")
   - State the intervention purpose (from notes if available)
 
 (Repeat for all days with scheduled sessions)
 
 ### Notes
 - Include 3–6 bullet points explaining the logic:
-  • How mandatory interventions were scheduled  
-  • Why certain slots were chosen  
-  • Any constraints you respected  
-  • How adult capacity was used  
+  • How mandatory interventions were scheduled
+  • Why certain slots were chosen
+  • Any constraints you respected
+  • How adult capacity was used
 
 -----------------------------------------
 DATA PROVIDED
 -----------------------------------------
-Below is the anonymised data you must use.  
-Remember: **use the pseudonyms EXACTLY as listed.**
+Below is the anonymised data you must use.
+Remember: use the pseudonyms EXACTLY as listed.
 
 PUPILS JSON:
-{{PUPILS_JSON}}
+${JSON.stringify(pupils, null, 2)}
 
 TIMETABLE JSON:
-{{TIMETABLE_JSON}}
+${JSON.stringify(timetable, null, 2)}
 
 MANDATORY INTERVENTIONS:
-{{MANDATORY_JSON}}
+${JSON.stringify(mandatoryInterventions, null, 2)}
 
 ADULT AVAILABILITY:
-{{ADULTS_JSON}}
+${JSON.stringify(adultAvailability, null, 2)}
 
 -----------------------------------------
 
-Create the most realistic, maximally helpful, teacher-ready weekly intervention plan possible.  
-
+Create the most realistic, maximally helpful, teacher-ready weekly intervention plan possible.
     `.trim();
 
-    // Call OpenAI – adjust model + endpoint to match what you're using in suggestGroups.js
-    const apiKey = process.env.OPENAI_API_KEY; // set this in Netlify env vars
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       return {
@@ -200,14 +215,14 @@ Create the most realistic, maximally helpful, teacher-ready weekly intervention 
     }
 
     const completion = await openaiResponse.json();
-    const planText = completion.choices?.[0]?.message?.content || "No plan generated.";
+    const planText =
+      completion.choices?.[0]?.message?.content || "No plan generated.";
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan: planText })
     };
-
   } catch (err) {
     console.error("Error in suggestRota function:", err);
     return {
