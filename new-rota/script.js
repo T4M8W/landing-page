@@ -321,40 +321,6 @@ function findUnexpectedNames(nameColumnKey) {
   return flagged;
 }
 
-function findUnexpectedNames(nameCol) {
-  const flagged = [];
-
-  // Build a set of all pupil names in the name column
-  const pupilNames = new Set();
-  originalRows.forEach((row) => {
-    const val = (row[nameCol] || "").trim();
-    if (val) pupilNames.add(val);
-  });
-
-  if (!pupilNames.size) return flagged;
-
-  const fields = Object.keys(originalRows[0] || {});
-
-  originalRows.forEach((row, rowIndex) => {
-    fields.forEach((fieldKey) => {
-      if (fieldKey === nameCol) return; // allowed here
-
-      const raw = (row[fieldKey] || "").trim();
-      if (!raw) return;
-
-      if (pupilNames.has(raw)) {
-        flagged.push({
-          rowNumber: rowIndex + 2, // +1 for header row, +1 for 1-based index
-          columnKey: fieldKey,
-          value: raw
-        });
-      }
-    });
-  });
-
-  return flagged;
-}
-
 // ---------- Step 6–7: anonymise data ----------
 
 function anonymiseData() {
