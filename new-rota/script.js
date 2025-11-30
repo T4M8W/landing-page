@@ -54,18 +54,16 @@ function isName(value) {
   return namePattern.test(cleaned);
 }
 
-
 let originalRows = [];       // Raw parsed rows from CSV
 let anonymisedRows = [];     // Rows with pseudonyms applied
-let realToPseudo = {};       // { "Alice Smith": "Anon-1", ... }
-let pseudoToReal = {};       // { "Anon-1": "Alice Smith", ... }
+let realToPseudo = {};       // { "Alice Smith": "Pupil 1", ... }
+let pseudoToReal = {};       // { "Pupil 1": "Alice Smith", ... }
 let nameColumnKey = null;    // Header of the detected name column
 let nameCheckPassed = false; // Only true after a clean "check for names"
 let showingPseudonyms = true;
-let currentPlanAnon = "";   // AI response with pseudonyms (Pupil 1, etc.)
-let currentPlanReal = "";   // Same response with real names
+let currentPlanAnon = "";    // AI response with pseudonyms (Pupil 1, etc.)
+let currentPlanReal = "";    // Same response with real names
 let showingRealPlan = false;
-
 
 const NAME_COLUMN_CANDIDATES = [
   "name",
@@ -79,76 +77,89 @@ const NAME_COLUMN_CANDIDATES = [
 // ---------- DOM wiring ----------
 
 document.addEventListener("DOMContentLoaded", () => {
-    const fileInput        = document.getElementById("csvFileInput");
-    const checkNamesButton = document.getElementById("checkNamesButton");
-    const anonymiseButton  = document.getElementById("anonymiseButton");
-    const toggleNamesButton = document.getElementById("toggleNamesButton");
-    const loadTimetableButton = document.getElementById("loadTimetableButton");
-    const generatePlanButton = document.getElementById("generatePlanButton");
+  const fileInput           = document.getElementById("csvFileInput");
+  const checkNamesButton    = document.getElementById("checkNamesButton");
+  const anonymiseButton     = document.getElementById("anonymiseButton");
+  const toggleNamesButton   = document.getElementById("toggleNamesButton");
+  const loadTimetableButton = document.getElementById("loadTimetableButton");
+  const generatePlanButton  = document.getElementById("generatePlanButton");
+  const planStatus          = document.getElementById("planStatus");
+  const planOutput          = document.getElementById("planOutput");
+  const togglePlanButton    = document.getElementById("togglePlanNamesButton");
 
-      if (generatePlanButton) {
-  generatePlanButton.addEventListener("click", async () => {
-    const planStatus = document.getElementById("planStatus");
-    const planOutput = document.getElementById("planOutput");
+  // Generate intervention plan (prototype)
+  if (generatePlanButton) {
+    generatePlanButton.addEventListener("click", async () => {
+      if (planOutput) planOutput.textContent = "";
 
-    if (planOutput) planOutput.textContent = "";
-
-    const payload = buildRotaPayload();
-    if (!payload) {
-      // buildRotaPayload already set a status message
-      return;
-    }
-
-    if (planStatus) {
-      planStatus.textContent = "Generating intervention plan… (this may take a few seconds)";
-    }
-
-    try {
-      const response = await fetch("/.netlify/functions/suggestRota", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (planOutput) {
-        planOutput.textContent = data.plan || "No plan text returned from backend.";
+      const payload = buildRotaPayload();
+      if (!payload) {
+        // buildRotaPayload already set a status message if needed
+        return;
       }
 
       if (planStatus) {
-        planStatus.textContent = "Intervention plan generated (prototype).";
+        planStatus.textContent = "Generating intervention plan… (this may take a few seconds)";
       }
-    } catch (err) {
-      console.error("Error calling suggestRota function:", err);
-    if (planStatus) {
-      planStatus.textContent =
-        "There was a problem generating the plan. Please try again or check the console.";
+
+      try {
+        const response = await fetch("/.netlify/functions/suggestRota", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Store anonymised + real versions
+        currentPlanAnon = data.plan || "No plan text returned from backend.";
+        currentPlanReal = reidentifyText(currentPlanAnon);
+        showingRealPlan = false;
+
+        if (planOutput) {
+          // Show anonymised version by default
+          planOutput.textContent = currentPlanAnon;
+        }
+
+        if (planStatus) {
+          planStatus.textContent = "Intervention plan generated (prototype).";
+        }
+
+        // Enable the toggle button now that we have a plan
+        if (togglePlanButton) {
+          togglePlanButton.disabled = false;
+          togglePlanButton.textContent = "Show real pupil names";
+        }
+      } catch (err) {
+        console.error("Error calling suggestRota function:", err);
+        if (planStatus) {
+          planStatus.textContent =
+            "There was a problem generating the plan. Please try again or check the console.";
+        }
       }
-    }
-  });
-}
+    });
+  }
 
-const togglePlanButton = document.getElementById("togglePlanNamesButton");
-if (togglePlanButton) {
-  togglePlanButton.addEventListener("click", () => {
-    if (!currentPlanAnon) return;
+  // Toggle anonymised / real names in the generated plan
+  if (togglePlanButton) {
+    togglePlanButton.addEventListener("click", () => {
+      if (!currentPlanAnon) return;
 
-    showingRealPlan = !showingRealPlan;
+      showingRealPlan = !showingRealPlan;
 
-    if (planOutput) {
-      planOutput.textContent = showingRealPlan ? currentPlanReal : currentPlanAnon;
-    }
+      if (planOutput) {
+        planOutput.textContent = showingRealPlan ? currentPlanReal : currentPlanAnon;
+      }
 
-    togglePlanButton.textContent = showingRealPlan
-      ? "Show anonymised pupil names"
-      : "Show real pupil names";
-  });
-}
+      togglePlanButton.textContent = showingRealPlan
+        ? "Show anonymised pupil names"
+        : "Show real pupil names";
+    });
+  }
 
   if (loadTimetableButton) {
     loadTimetableButton.addEventListener("click", () => {
@@ -249,7 +260,7 @@ function performNameCheck() {
   }
 
   nameColumnKey = detectNameColumn(fields);
-    console.log("Detected name column:", nameColumnKey);
+  console.log("Detected name column:", nameColumnKey);
   if (!nameColumnKey) {
     updateStatus(
       "I couldn't detect a name column. " +
@@ -291,8 +302,8 @@ function performNameCheck() {
 
 function detectNameColumn(fields) {
   const lowerFields = fields.map((f) => f.toLowerCase().trim());
-    console.log("Fields detected:", fields);
-    console.log("Lowercase fields:", lowerFields);
+  console.log("Fields detected:", fields);
+  console.log("Lowercase fields:", lowerFields);
   // Try direct matches
   for (const candidate of NAME_COLUMN_CANDIDATES) {
     const index = lowerFields.indexOf(candidate);
@@ -311,7 +322,7 @@ function detectNameColumn(fields) {
   return null;
 }
 
-// Scan for any cells outside the main name column that exactly match a pupil name.
+// Scan for any cells outside the main name column that contain a pupil-like name.
 function findUnexpectedNames(nameColumnKey) {
   const flagged = [];
 
@@ -358,7 +369,7 @@ function anonymiseData() {
   showToggleButton();
   updateToggleButtonLabel();
 
-    updateStatus(
+  updateStatus(
     `Anonymisation complete. ` +
     `Replaced ${Object.keys(realToPseudo).length} pupil names with pseudonyms. ` +
     "This anonymised dataset is now safe to send to the AI backend. " +
@@ -367,7 +378,6 @@ function anonymiseData() {
 
   enableButton("generatePlanButton", true);
 }
-
 
 function buildPseudonymMaps(nameCol) {
   realToPseudo = {};
