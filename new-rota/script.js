@@ -183,6 +183,8 @@ function performNameCheck() {
   if (!fields.length) {
     updateStatus("No columns detected. Please check your CSV format.");
     return;
+    console.log("Scanning cell:", cellValue);
+console.log("IsMatch:", isName(cellValue));
   }
 
   nameColumnKey = detectNameColumn(fields);
