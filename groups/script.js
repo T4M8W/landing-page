@@ -330,6 +330,7 @@ Create [X] groups of [Y] pupils based on the following principles. Briefly expla
 6. Do **not** create groups based purely on “a mix” — every group must have a clear rationale for learning.
 7. Do not assume that pupils with additional needs (e.g. EHCPs, ASD, SEMH) are suited to support others. These pupils should not be framed as peer supporters unless explicitly indicated in the teacher notes.
 8. Do not place pupils in more than one group.
+9. Every child must be placed in a group.
 
 After forming the groups, write a short explanation for each group. Each explanation should:
 - Focus on **pedagogical purpose** (e.g. pairing strengths and areas of need)
