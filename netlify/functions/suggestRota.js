@@ -98,8 +98,6 @@ You must follow these constraints when scheduling interventions:
 • Avoid scheduling during:
   – Break (10:45–11:00)
   – Lunch (12:15–13:00)
-  – Registration (8:40–9:00 and 13:00–13:15)
-  – Assembly (if marked in the timetable)
 • Do NOT schedule during specialist subjects unless the timetable clearly indicates flexibility.
 • Avoid PE unless unavoidable.
 • Avoid Number Sense / Spelling / Maths whole-class teaching unless the grid colour tags explicitly allow support.
@@ -126,7 +124,8 @@ INTERVENTION DESIGN PRINCIPLES
 -----------------------------------------
 When building the weekly plan:
 • Sessions should be short, clear, and specific (e.g. 15–20 mins).
-• Spread support fairly without overloading the same session.
+• You can schedule 20 minute interventions conscutively (e.g. two 20 min sessions in a 40 min slot), up to the time allowed by the timetable for that session.
+• Prioritise highest-need pupils for support but ensure all pupils with additional needs receive some support across the week.
 • Avoid repeatedly removing the same pupil from the same lesson unless required.
 • Keep the plan realistic for a real classroom: minimal disruption, predictable routine.
 
