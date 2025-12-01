@@ -118,16 +118,25 @@ RULES:
 • These MUST be scheduled first.
 • They cannot be replaced, removed, or deprioritised.
 • They should occur at consistent times each week unless impossible.
+• If no compulsory interventions are given, assign available adults to pupils according to need.
+• Fill the available adult capacity as fully as possible.
+• Fill the available time slots as fully as possible. e.g. if a session allows 1 adult for 1 hour, schedule three 20 minute interventions.
 
 -----------------------------------------
 INTERVENTION DESIGN PRINCIPLES
 -----------------------------------------
 When building the weekly plan:
 • Sessions should be short, clear, and specific (e.g. 15–20 mins).
-• You can schedule 20 minute interventions conscutively (e.g. two 20 min sessions in a 40 min slot), up to the time allowed by the timetable for that session.
+• You can schedule 20 minute interventions conscutively (e.g. two 20 min sessions in a 40 min slot), up to the time allowed by the timetable for that session. For example, if the time allowed for a lesson in the timetable is 1 hour, you can schedule up to three 20 minute interventions in that slot.
 • Prioritise highest-need pupils for support but ensure all pupils with additional needs receive some support across the week.
 • Avoid repeatedly removing the same pupil from the same lesson unless required.
 • Keep the plan realistic for a real classroom: minimal disruption, predictable routine.
+• Use adult capacity efficiently: avoid under- or over-utilising available adults.
+•
+
+-----------------------------------------
+GROUPING LOGIC
+-----------------------------------------
 
 When choosing which pupils to group together:
 • Prefer small targeted groups.
