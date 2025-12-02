@@ -574,79 +574,213 @@ const SESSION_SUPPORT = {};
 
 const SAMPLE_TIMETABLE = [
   // MONDAY
-  { id: "mon_reg_am",   day: "Mon", start: "08:40", end: "09:00", label: "Registration" },
-  { id: "mon_assembly", day: "Mon", start: "09:00", end: "09:20", label: "Assembly" },
-  { id: "mon_spell",    day: "Mon", start: "09:20", end: "09:40", label: "Spelling" },
-  { id: "mon_write",    day: "Mon", start: "09:40", end: "10:45", label: "Writing" },
-  { id: "mon_break",    day: "Mon", start: "10:45", end: "11:00", label: "Break" },
-  { id: "mon_maths",    day: "Mon", start: "11:00", end: "12:00", label: "Maths" },
-  { id: "mon_reading",  day: "Mon", start: "12:00", end: "12:15", label: "Reading" },
-  { id: "mon_lunch",    day: "Mon", start: "12:15", end: "13:00", label: "Lunch" },
-  { id: "mon_reg_pm",   day: "Mon", start: "13:00", end: "13:15", label: "Afternoon registration" },
-  { id: "mon_number",   day: "Mon", start: "13:15", end: "13:45", label: "Number Sense" },
-  { id: "mon_pm1",      day: "Mon", start: "13:45", end: "14:15", label: "Afternoon Session 1" },
-  { id: "mon_pm2",      day: "Mon", start: "14:15", end: "15:00", label: "Afternoon Session 2" },
-  { id: "mon_reader",   day: "Mon", start: "15:00", end: "15:20", label: "Class Reader" },
+{ id: "mon_reg_am",   day: "Mon", start: "08:40", end: "09:00", label: "Registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-  // TUESDAY (you can adjust subjects if yours differ)
-  { id: "tue_reg_am",   day: "Tue", start: "08:40", end: "09:00", label: "Registration" },
-  { id: "tue_assembly", day: "Tue", start: "09:00", end: "09:20", label: "Assembly" },
-  { id: "tue_spell",    day: "Tue", start: "09:20", end: "09:40", label: "Spelling" },
-  { id: "tue_write",    day: "Tue", start: "09:40", end: "10:45", label: "Writing" },
-  { id: "tue_break",    day: "Tue", start: "10:45", end: "11:00", label: "Break" },
-  { id: "tue_maths",    day: "Tue", start: "11:00", end: "12:00", label: "Maths" },
-  { id: "tue_reading",  day: "Tue", start: "12:00", end: "12:15", label: "Reading" },
-  { id: "tue_lunch",    day: "Tue", start: "12:15", end: "13:00", label: "Lunch" },
-  { id: "tue_reg_pm",   day: "Tue", start: "13:00", end: "13:15", label: "Afternoon registration" },
-  { id: "tue_number",   day: "Tue", start: "13:15", end: "13:45", label: "Number Sense" },
-  { id: "tue_pm1",      day: "Tue", start: "13:45", end: "14:15", label: "Afternoon Session 1" },
-  { id: "tue_pm2",      day: "Tue", start: "14:15", end: "15:00", label: "Afternoon Session 2" },
-  { id: "tue_reader",   day: "Tue", start: "15:00", end: "15:20", label: "Class Reader" },
+{ id: "mon_assembly", day: "Mon", start: "09:00", end: "09:20", label: "Assembly",
+  type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-  // WEDNESDAY
-  { id: "wed_reg_am",   day: "Wed", start: "08:40", end: "09:00", label: "Registration" },
-  { id: "wed_assembly", day: "Wed", start: "09:00", end: "09:20", label: "Assembly" },
-  { id: "wed_spell",    day: "Wed", start: "09:20", end: "09:40", label: "Spelling" },
-  { id: "wed_write",    day: "Wed", start: "09:40", end: "10:45", label: "Writing" },
-  { id: "wed_break",    day: "Wed", start: "10:45", end: "11:00", label: "Break" },
-  { id: "wed_maths",    day: "Wed", start: "11:00", end: "12:00", label: "Maths" },
-  { id: "wed_reading",  day: "Wed", start: "12:00", end: "12:15", label: "Reading" },
-  { id: "wed_lunch",    day: "Wed", start: "12:15", end: "13:00", label: "Lunch" },
-  { id: "wed_reg_pm",   day: "Wed", start: "13:00", end: "13:15", label: "Afternoon registration" },
-  { id: "wed_number",   day: "Wed", start: "13:15", end: "13:45", label: "Number Sense" },
-  { id: "wed_pm1",      day: "Wed", start: "13:45", end: "14:15", label: "Afternoon Session 1" },
-  { id: "wed_pm2",      day: "Wed", start: "14:15", end: "15:00", label: "Afternoon Session 2" },
-  { id: "wed_reader",   day: "Wed", start: "15:00", end: "15:20", label: "Class Reader" },
+{ id: "mon_spell",    day: "Mon", start: "09:20", end: "09:40", label: "Spelling",
+  type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-  // THURSDAY
-  { id: "thu_reg_am",   day: "Thu", start: "08:40", end: "09:00", label: "Registration" },
-  { id: "thu_assembly", day: "Thu", start: "09:00", end: "09:20", label: "Assembly" },
-  { id: "thu_spell",    day: "Thu", start: "09:20", end: "09:40", label: "Spelling" },
-  { id: "thu_write",    day: "Thu", start: "09:40", end: "10:45", label: "Writing" },
-  { id: "thu_break",    day: "Thu", start: "10:45", end: "11:00", label: "Break" },
-  { id: "thu_maths",    day: "Thu", start: "11:00", end: "12:00", label: "Maths" },
-  { id: "thu_reading",  day: "Thu", start: "12:00", end: "12:15", label: "Reading" },
-  { id: "thu_lunch",    day: "Thu", start: "12:15", end: "13:00", label: "Lunch" },
-  { id: "thu_reg_pm",   day: "Thu", start: "13:00", end: "13:15", label: "Afternoon registration" },
-  { id: "thu_number",   day: "Thu", start: "13:15", end: "13:45", label: "Number Sense" },
-  { id: "thu_pm1",      day: "Thu", start: "13:45", end: "14:15", label: "Afternoon Session 1" },
-  { id: "thu_pm2",      day: "Thu", start: "14:15", end: "15:00", label: "Afternoon Session 2" },
-  { id: "thu_reader",   day: "Thu", start: "15:00", end: "15:20", label: "Class Reader" },
+{ id: "mon_write",    day: "Mon", start: "09:40", end: "10:45", label: "Writing",
+  type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-  // FRIDAY
-  { id: "fri_reg_am",   day: "Fri", start: "08:40", end: "09:00", label: "Registration" },
-  { id: "fri_assembly", day: "Fri", start: "09:00", end: "09:20", label: "Assembly" },
-  { id: "fri_spell",    day: "Fri", start: "09:20", end: "09:40", label: "Spelling" },
-  { id: "fri_write",    day: "Fri", start: "09:40", end: "10:45", label: "Writing" },
-  { id: "fri_break",    day: "Fri", start: "10:45", end: "11:00", label: "Break" },
-  { id: "fri_maths",    day: "Fri", start: "11:00", end: "12:00", label: "Maths" },
-  { id: "fri_reading",  day: "Fri", start: "12:00", end: "12:15", label: "Reading (flexible)" },
-  { id: "fri_lunch",    day: "Fri", start: "12:15", end: "13:00", label: "Lunch" },
-  { id: "fri_reg_pm",   day: "Fri", start: "13:00", end: "13:15", label: "Afternoon registration" },
-  { id: "fri_number",   day: "Fri", start: "13:15", end: "13:45", label: "Number Sense" },
-  { id: "fri_pm1",      day: "Fri", start: "13:45", end: "14:15", label: "Afternoon Session 1" },
-  { id: "fri_pm2",      day: "Fri", start: "14:15", end: "15:00", label: "Afternoon Session 2" },
-  { id: "fri_reader",   day: "Fri", start: "15:00", end: "15:20", label: "Class Reader" }
+{ id: "mon_break",    day: "Mon", start: "10:45", end: "11:00", label: "Break",
+  type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "mon_maths",    day: "Mon", start: "11:00", end: "12:00", label: "Maths",
+  type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "mon_reading",  day: "Mon", start: "12:00", end: "12:15", label: "Reading",
+  type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "mon_lunch",    day: "Mon", start: "12:15", end: "13:00", label: "Lunch",
+  type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "mon_reg_pm",   day: "Mon", start: "13:00", end: "13:15", label: "Afternoon registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "mon_number",   day: "Mon", start: "13:15", end: "13:45", label: "Number Sense",
+  type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "mon_pm1",      day: "Mon", start: "13:45", end: "14:15", label: "Afternoon Session 1",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "mon_pm2",      day: "Mon", start: "14:15", end: "15:00", label: "Afternoon Session 2",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "mon_reader",   day: "Mon", start: "15:00", end: "15:20", label: "Class Reader",
+  type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+
+
+// TUESDAY
+{ id: "tue_reg_am",   day: "Tue", start: "08:40", end: "09:00", label: "Registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_assembly", day: "Tue", start: "09:00", end: "09:20", label: "Assembly",
+  type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_spell",    day: "Tue", start: "09:20", end: "09:40", label: "Spelling",
+  type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_write",    day: "Tue", start: "09:40", end: "10:45", label: "Writing",
+  type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_break",    day: "Tue", start: "10:45", end: "11:00", label: "Break",
+  type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "tue_maths",    day: "Tue", start: "11:00", end: "12:00", label: "Maths",
+  type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_reading",  day: "Tue", start: "12:00", end: "12:15", label: "Reading",
+  type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_lunch",    day: "Tue", start: "12:15", end: "13:00", label: "Lunch",
+  type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "tue_reg_pm",   day: "Tue", start: "13:00", end: "13:15", label: "Afternoon registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_number",   day: "Tue", start: "13:15", end: "13:45", label: "Number Sense",
+  type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_pm1",      day: "Tue", start: "13:45", end: "14:15", label: "Afternoon Session 1",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_pm2",      day: "Tue", start: "14:15", end: "15:00", label: "Afternoon Session 2",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "tue_reader",   day: "Tue", start: "15:00", end: "15:20", label: "Class Reader",
+  type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+
+
+// WEDNESDAY
+{ id: "wed_reg_am",   day: "Wed", start: "08:40", end: "09:00", label: "Registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_assembly", day: "Wed", start: "09:00", end: "09:20", label: "Assembly",
+  type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_spell",    day: "Wed", start: "09:20", end: "09:40", label: "Spelling",
+  type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_write",    day: "Wed", start: "09:40", end: "10:45", label: "Writing",
+  type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_break",    day: "Wed", start: "10:45", end: "11:00", label: "Break",
+  type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "wed_maths",    day: "Wed", start: "11:00", end: "12:00", label: "Maths",
+  type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_reading",  day: "Wed", start: "12:00", end: "12:15", label: "Reading",
+  type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_lunch",    day: "Wed", start: "12:15", end: "13:00", label: "Lunch",
+  type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "wed_reg_pm",   day: "Wed", start: "13:00", end: "13:15", label: "Afternoon registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_number",   day: "Wed", start: "13:15", end: "13:45", label: "Number Sense",
+  type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_pm1",      day: "Wed", start: "13:45", end: "14:15", label: "Afternoon Session 1",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_pm2",      day: "Wed", start: "14:15", end: "15:00", label: "Afternoon Session 2",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "wed_reader",   day: "Wed", start: "15:00", end: "15:20", label: "Class Reader",
+  type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+
+
+// THURSDAY
+{ id: "thu_reg_am",   day: "Thu", start: "08:40", end: "09:00", label: "Registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_assembly", day: "Thu", start: "09:00", end: "09:20", label: "Assembly",
+  type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_spell",    day: "Thu", start: "09:20", end: "09:40", label: "Spelling",
+  type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_write",    day: "Thu", start: "09:40", end: "10:45", label: "Writing",
+  type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_break",    day: "Thu", start: "10:45", end: "11:00", label: "Break",
+  type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "thu_maths",    day: "Thu", start: "11:00", end: "12:00", label: "Maths",
+  type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_reading",  day: "Thu", start: "12:00", end: "12:15", label: "Reading",
+  type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_lunch",    day: "Thu", start: "12:15", end: "13:00", label: "Lunch",
+  type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "thu_reg_pm",   day: "Thu", start: "13:00", end: "13:15", label: "Afternoon registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_number",   day: "Thu", start: "13:15", end: "13:45", label: "Number Sense",
+  type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_pm1",      day: "Thu", start: "13:45", end: "14:15", label: "Afternoon Session 1",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_pm2",      day: "Thu", start: "14:15", end: "15:00", label: "Afternoon Session 2",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "thu_reader",   day: "Thu", start: "15:00", end: "15:20", label: "Class Reader",
+  type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
+
+
+
+// FRIDAY
+{ id: "fri_reg_am",   day: "Fri", start: "08:40", end: "09:00", label: "Registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_assembly", day: "Fri", start: "09:00", end: "09:20", label: "Assembly",
+  type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_spell",    day: "Fri", start: "09:20", end: "09:40", label: "Spelling",
+  type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_write",    day: "Fri", start: "09:40", end: "10:45", label: "Writing",
+  type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_break",    day: "Fri", start: "10:45", end: "11:00", label: "Break",
+  type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "fri_maths",    day: "Fri", start: "11:00", end: "12:00", label: "Maths",
+  type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_reading",  day: "Fri", start: "12:00", end: "12:15", label: "Reading",
+  type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_lunch",    day: "Fri", start: "12:15", end: "13:00", label: "Lunch",
+  type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
+
+{ id: "fri_reg_pm",   day: "Fri", start: "13:00", end: "13:15", label: "Afternoon registration",
+  type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_number",   day: "Fri", start: "13:15", end: "13:45", label: "Number Sense",
+  type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_pm1",      day: "Fri", start: "13:45", end: "14:15", label: "Afternoon Session 1",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_pm2",      day: "Fri", start: "14:15", end: "15:00", label: "Afternoon Session 2",
+  type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
+
+{ id: "fri_reader",   day: "Fri", start: "15:00", end: "15:20", label: "Class Reader",
+  type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 }
+
 ];
 
 // -----------------------------------------------------
