@@ -260,7 +260,7 @@ button:disabled {
 }
 
 #rota-instructions {
-  margin: auto;
+  margin: margin: 3rem auto 2rem auto;
   max-width: 900px;
 }
 .blurb-p { margin-bottom: 8px; }
