@@ -247,8 +247,8 @@ Create the most realistic, maximally helpful, teacher-ready weekly intervention 
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        temperature: 0.4,
-        max_tokens: 1200
+        temperature: 0.1,
+        max_tokens: 3000
       })
     });
 
