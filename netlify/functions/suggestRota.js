@@ -129,10 +129,10 @@ When building the weekly plan:
 • Sessions should be short, clear, and specific (e.g. 15–20 mins).
 • You can schedule 20 minute interventions conscutively (e.g. two 20 min sessions in a 40 min slot), up to the time allowed by the timetable for that session. For example, if the time allowed for a lesson in the timetable is 1 hour, you can schedule up to three 20 minute interventions in that slot.
 • Prioritise highest-need pupils for support but ensure all pupils with additional needs receive some support across the week.
+• If a child recieves no additional support, they do not need to be mentioned in the plan.
 • Avoid repeatedly removing the same pupil from the same lesson unless required.
 • Keep the plan realistic for a real classroom: minimal disruption, predictable routine.
 • Use adult capacity efficiently: avoid under- or over-utilising available adults.
-•
 
 -----------------------------------------
 GROUPING LOGIC
