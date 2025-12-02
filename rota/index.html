@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rota Prototype | ChalkboardAI</title>
+  <meta name="description" content="Groups Prototype – Proof of concept protoype - try out the anonymisation pipeline and a simple AI task" />
+  <meta name="robots" content="index,follow" />
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header class="container" style="padding:1.25rem 0;">
+        <a href="#main" class="skip">Skip to main content</a>
+        <a href="../index.html" class="logo-link">
+            <div class="logo-crop">
+                <picture>
+                    <source type="image/webp"
+                            srcset="../images/logo-transparent-480-28.08.25.webp 480w,
+                                    ../images/logo-transparent-800-28.08.25.webp 800w,
+                                    ../images/logo-transparent-1200-28.08.25.webp 1200w">
+                    <img class="logo"
+                        src="../images/logo-transparent-800-28.08.25.png"
+                        srcset="../images/logo-transparent-480-28.08.25.png 480w,
+                                ../images/logo-transparent-800-28.08.25.png 800w,
+                                ../images/logo-transparent-1200-28.08.25.png 1200w"
+                        sizes="(max-width: 800px) 80vw, 800px"
+                        alt="ChalkboardAI logo"
+                        width="800" height="200"
+                        loading="eager" fetchpriority="high" decoding="async">
+                    </picture>
+                </div>
+            </a>
+    <nav class="navbar full-band" role="navigation" aria-label="Main Navigation">
+        <ul>
+            <li class="dropdown">
+            <button onclick="toggleDropdown()" class="dropbtn"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="dropdown-content">
+                The Tools
+            </button>
+            <div class="dropdown-content" id="dropdown-content" role="menu">
+                <a href="../groups/index.html" role="menuitem">Groups (Prototype)</a>
+                <a href="/rota/index.html" role="menuitem">Rota</a>
+                <a href="../provision-mapper/index.html" role="menuitem">Provision Mapper</a>
+                <a href="../reports/index.html" role="menuitem">Reports</a>
+            </div>
+            </li>
+            <li><a class="white" href="../the-approach/index.html">The Approach</a></li>
+            <li><a class="white" href="../about-me/index.html">About Me</a></li>
+            <li><a class="white" href="../contact-me/index.html">Contact Me</a></li>
+        </ul>
+    </nav>
+    </header>
+    <main id="main" class="main">
+  <h1>Rota Prototype</h1>
+  <h3>About This Prototype </h3>
+      <p>ChalkboardRota helps you build a weekly intervention timetable quickly, accurately, and without sharing pupil data.</p>
+      <p><strong>Please only upload sample or dummy data.</strong></p>
+      <p>Upload your class list and timetable, tag when support is available, and the tool creates an anonymised plan. The AI only sees pseudonyms; real names stay on your device and are added back in at the end.</p>
+      <p>This version is for demonstration only.</p>
+      <p>It is an early prototype — expect rough edges — but it shows the full workflow. Try it out and see how the rota adjusts to your class, timetable, and staffing.</p>
+      <h3>A full, secure, school-ready version is in development.</h3>
+      <br>
+      <image src="../images/rota-logo.png"></image>
+      <div class="tool-blurb" id="uploader-box" style="max-width: 900px; margin-top: 2rem;">
+
+
+<input type="file" id="csvFileInput" />
+
+<div style="margin-top: 1em;">
+  <button id="checkNamesButton" disabled>Check for names</button>
+  <button id="anonymiseButton" disabled>Anonymise</button>
+  <button id="toggleNamesButton" style="display:none;">Show real names</button>
+</div>
+
+<div id="statusBox" style="margin-top: 0.5em;"></div>
+
+<div id="table-container" style="margin-top: 1em;"></div>
+
+<hr>
+
+<section id="timetable-section">
+  <h2>Timetable</h2>
+  <p>This prototype uses a built-in sample timetable.</p>
+
+  <button id="loadTimetableButton">Load sample timetable</button>
+  <div id="timetableStatus" style="margin-top: 0.5em;"></div>
+
+  <div id="timetable-grid" style="margin-top: 1em;"></div>
+
+  <div style="margin-top: 1em;">
+  <button id="generatePlanButton" disabled>Generate intervention plan (prototype)</button>
+  <div id="planStatus" style="margin-top: 0.5em;"></div>
+  <button id="togglePlanNamesButton" disabled>Show real pupil names</button>
+</div>
+
+<div id="planOutput" style="margin-top: 1em; white-space: pre-wrap;"></div>
+
+<div id="planOutput"></div>
+
+
+</section>
+
+</main>
+
+  <footer>
+        <p><a href="../index.html" aria-label="Back to ChalkboardAI home" class="see-more">← Back to home</a></p>
+        <img src="../images/icon-transparent.png" alt="ChalkboardAI Icon" class="icon">
+         <small id="privacy-footer">Privacy-first by design · GDPR-friendly · Built by a teacher</small>
+        <p>© 2025 ChalkboardAI. All rights reserved.</p>
+    </footer>
+
+  <script src="/script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
