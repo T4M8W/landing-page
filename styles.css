@@ -258,6 +258,11 @@ button:disabled {
   background-color: #f0fdfa;
   display: block;
 }
+
+#rota-instructions {
+  margin: auto;
+  max-width: 900px;
+}
 .blurb-p { margin-bottom: 8px; }
 .details {
   text-align: center;
