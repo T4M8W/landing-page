@@ -577,7 +577,7 @@ const SAMPLE_TIMETABLE = [
 { id: "mon_reg_am",   day: "Mon", start: "08:40", end: "09:00", label: "Registration",
   type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-{ id: "mon_assembly", day: "Mon", start: "09:00", end: "09:20", label: "Assembly",
+{ id: "mon_assembly", day: "Mon", start: "09:00", end: "09:20", label: "whole class focus",
   type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
 { id: "mon_spell",    day: "Mon", start: "09:20", end: "09:40", label: "Spelling",
@@ -619,7 +619,7 @@ const SAMPLE_TIMETABLE = [
 { id: "tue_reg_am",   day: "Tue", start: "08:40", end: "09:00", label: "Registration",
   type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-{ id: "tue_assembly", day: "Tue", start: "09:00", end: "09:20", label: "Assembly",
+{ id: "tue_assembly", day: "Tue", start: "09:00", end: "09:20", label: "whole class focus",
   type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
 { id: "tue_spell",    day: "Tue", start: "09:20", end: "09:40", label: "Spelling",
@@ -661,7 +661,7 @@ const SAMPLE_TIMETABLE = [
 { id: "wed_reg_am",   day: "Wed", start: "08:40", end: "09:00", label: "Registration",
   type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-{ id: "wed_assembly", day: "Wed", start: "09:00", end: "09:20", label: "Assembly",
+{ id: "wed_assembly", day: "Wed", start: "09:00", end: "09:20", label: "whole class focus",
   type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
 { id: "wed_spell",    day: "Wed", start: "09:20", end: "09:40", label: "Spelling",
@@ -703,7 +703,7 @@ const SAMPLE_TIMETABLE = [
 { id: "thu_reg_am",   day: "Thu", start: "08:40", end: "09:00", label: "Registration",
   type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-{ id: "thu_assembly", day: "Thu", start: "09:00", end: "09:20", label: "Assembly",
+{ id: "thu_assembly", day: "Thu", start: "09:00", end: "09:20", label: "whole class focus",
   type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
 { id: "thu_spell",    day: "Thu", start: "09:20", end: "09:40", label: "Spelling",
@@ -745,7 +745,7 @@ const SAMPLE_TIMETABLE = [
 { id: "fri_reg_am",   day: "Fri", start: "08:40", end: "09:00", label: "Registration",
   type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
-{ id: "fri_assembly", day: "Fri", start: "09:00", end: "09:20", label: "Assembly",
+{ id: "fri_assembly", day: "Fri", start: "09:00", end: "09:20", label: "whole class focus",
   type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
 
 { id: "fri_spell",    day: "Fri", start: "09:20", end: "09:40", label: "Spelling",
