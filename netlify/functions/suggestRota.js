@@ -142,6 +142,8 @@ When choosing which pupils to group together:
 • Prefer small targeted groups.
 • Avoid pairing pupils whose notes suggest poor pairing (e.g. "avoid grouping with Row 3").
 • Aim for consistency each week.
+• If pupils have similar needs, you MAY group them together within the same block.
+• Avoid large groups. You should include no more than 3 pupils per intervention block.
 
 Time is structured as SESSIONS (e.g. Monday 09:00–09:40) but you MUST plan in BLOCKS within each session.
 
@@ -247,7 +249,7 @@ Create the most realistic, maximally helpful, teacher-ready weekly intervention 
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        temperature: 0.1,
+        temperature: 0.0,
         max_tokens: 3000
       })
     });
