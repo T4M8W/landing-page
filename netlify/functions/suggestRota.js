@@ -199,6 +199,7 @@ You MUST:
 If you choose NOT to use Registration or Assembly for a particular pupil, you must state a specific reason in the notes (e.g. “this pupil’s target is literacy; assembly is used for singing which they benefit from socially, so I used maths instead”).
 
 ### Notes
+- For each intervention block planned, specify the pupils involved and the intedned intervention activity.
 - Include 3–6 bullet points explaining the logic:
   • How mandatory interventions were scheduled
   • Why certain slots were chosen
