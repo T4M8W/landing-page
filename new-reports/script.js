@@ -125,6 +125,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAddSection = document.getElementById("btnAddSection");
   const btnSaveTemplate = document.getElementById("btnSaveTemplate");
   const btnToTone = document.getElementById("btnToTone");
+  // Grab the initial section-row from the HTML as our template
+const sectionTemplate = sectionList.querySelector(".section-row");
+
 
   // Helper to renumber section headers (Section 1, Section 2, etc.)
   function renumberSectionHeaders() {
@@ -145,27 +148,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Clone the first section-row as a template for new sections
-  function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
-    const template = sectionList.querySelector(".section-row");
-    const clone = template.cloneNode(true);
-    const idx = sectionList.querySelectorAll(".section-row").length;
-
-    clone.dataset.sectionIndex = idx;
-    clone.querySelector(".section-row-header span").textContent = `Section ${idx + 1}`;
-
-    const nameInput = clone.querySelector(".section-name");
-    const wordInput = clone.querySelector(".section-word-count");
-    const nextStepCheckbox = clone.querySelector(".section-next-step");
-
-    nameInput.value = name || `Section ${idx + 1}`;
-    wordInput.value = wordCount;
-    nextStepCheckbox.checked = includeNextStep;
-
-    // Wire up controls
-    wireSectionRowControls(clone);
-
-    return clone;
+function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
+  if (!sectionTemplate) {
+    console.error("No sectionTemplate found in HTML");
+    return null;
   }
+
+  const clone = sectionTemplate.cloneNode(true);
+  const idx = sectionList.querySelectorAll(".section-row").length;
+
+  clone.dataset.sectionIndex = idx;
+  const headerSpan = clone.querySelector(".section-row-header span");
+  if (headerSpan) headerSpan.textContent = `Section ${idx + 1}`;
+
+  const nameInput = clone.querySelector(".section-name");
+  const wordInput = clone.querySelector(".section-word-count");
+  const nextStepCheckbox = clone.querySelector(".section-next-step");
+
+  if (nameInput) nameInput.value = name || `Section ${idx + 1}`;
+  if (wordInput) wordInput.value = wordCount;
+  if (nextStepCheckbox) nextStepCheckbox.checked = includeNextStep;
+
+  wireSectionRowControls(clone);
+  return clone;
+}
 
   function wireSectionRowControls(row) {
     const btnUp = row.querySelector(".btn-move-up");
