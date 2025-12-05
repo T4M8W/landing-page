@@ -6,6 +6,16 @@ let isAnonView = true;
 let currentAnonData = []; // Store the anonymised version of originalData
 let highlightedCells = {}; // Track flagged cells by row+col
 let rawAnonymisedSuggestion = ''; // global placeholder
+let namesAreClean = false; // gate for anonymise & suggest
+
+// Try to disable buttons safely (in case script loads before DOM)
+window.addEventListener('DOMContentLoaded', () => {
+  const anonymiseBtn = document.getElementById('anonymise');
+  const suggestBtn = document.getElementById('suggest-groups');
+
+  if (anonymiseBtn) anonymiseBtn.disabled = true;
+  if (suggestBtn) suggestBtn.disabled = true;
+});
 
 // 🧠 Normalisation patch: expands common shorthand support terms to help GPT interpret them correctly
 function normaliseSupportTerms(text) {
@@ -86,8 +96,10 @@ function displayTable(data, headers) {
       td.style.border = '1px solid #ccc';
       td.style.padding = '8px';
 
+      // Highlight flagged cells
       if (highlightedCells[rowIndex] && highlightedCells[rowIndex][header]) {
-        td.classList.add('highlight');
+        td.style.backgroundColor = '#fff3cd'; // pale yellow
+        td.style.fontWeight = 'bold';
       }
 
       tr.appendChild(td);
@@ -120,10 +132,21 @@ document.getElementById('upload').addEventListener('change', function (e) {
     displayTable(originalData, headers);
     document.getElementById('results').innerHTML = '';
     document.getElementById('toggle-container').style.display = 'none';
+    const revealContainer = document.getElementById('reveal-button-container');
+    if (revealContainer) revealContainer.style.display = 'none';
+
     isAnonView = true;
     pupilNameMap = {};
     pseudoToReal = {};
     currentAnonData = [];
+    rawAnonymisedSuggestion = '';
+
+    // Reset gating
+    namesAreClean = false;
+    const anonymiseBtn = document.getElementById('anonymise');
+    const suggestBtn = document.getElementById('suggest-groups');
+    if (anonymiseBtn) anonymiseBtn.disabled = true;
+    if (suggestBtn) suggestBtn.disabled = true;
   };
 
   reader.readAsText(file);
@@ -138,6 +161,13 @@ document.getElementById('check-names').addEventListener('click', function () {
     alert("Couldn't find a 'Name' column.");
     return;
   }
+
+  // Each run of check-names should pessimistically lock things until we know it's clean
+  namesAreClean = false;
+  const anonymiseBtn = document.getElementById('anonymise');
+  const suggestBtn = document.getElementById('suggest-groups');
+  if (anonymiseBtn) anonymiseBtn.disabled = true;
+  if (suggestBtn) suggestBtn.disabled = true;
 
   const extractedNames = originalData
     .map(row => row[nameColumn])
@@ -185,19 +215,33 @@ document.getElementById('check-names').addEventListener('click', function () {
       <ul style="text-align: center; list-style: none; padding: 0;">
         ${foundNames.map(name => `<li>${name}</li>`).join('')}
       </ul>
-      <p style="text-align: center;">Please anonymise these entries before continuing.</p>
+      <p style="text-align: center;">Please anonymise these entries in your spreadsheet and re-upload before continuing.</p>
     `;
+
+    namesAreClean = false;
+    if (anonymiseBtn) anonymiseBtn.disabled = true;
+    if (suggestBtn) suggestBtn.disabled = true;
   } else {
     resultsDiv.innerHTML = `
       <p style="text-align: center;"><strong>✅ No names found in notes or comments.</strong></p>
-      <p style="text-align: center;">You’re good to go.</p>
+      <p style="text-align: center;">You’re good to go. You can now anonymise the list.</p>
     `;
+
+    namesAreClean = true;
+    if (anonymiseBtn) anonymiseBtn.disabled = false;
+    // Suggest-groups still relies on anonymisation, so keep it disabled for now
+    if (suggestBtn) suggestBtn.disabled = true;
   }
-}); // ✅ closes check-names click handler
+}); // closes check-names click handler
 
 // 3) Anonymise data
 document.getElementById('anonymise').addEventListener('click', function () {
   if (!originalData.length) return;
+
+  if (!namesAreClean) {
+    alert("You must run 'Check for Names' and clear all flagged names before anonymising.");
+    return;
+  }
 
   const anonymised = anonymiseData(originalData, headers);
   currentAnonData = anonymised;
@@ -210,6 +254,9 @@ document.getElementById('anonymise').addEventListener('click', function () {
   if (Object.keys(pseudoToReal).length > 0) {
     document.getElementById('toggle-container').style.display = 'block';
   }
+
+  const suggestBtn = document.getElementById('suggest-groups');
+  if (suggestBtn) suggestBtn.disabled = false;
 });
 
 // Pure anonymisation helper
@@ -301,6 +348,11 @@ document.getElementById('toggle-view').addEventListener('click', function () {
 
 // 5) Ask GPT for group suggestions using anonymised data
 document.getElementById('suggest-groups').addEventListener('click', async () => {
+  if (!namesAreClean) {
+    alert("You must run 'Check for Names' and clear all flagged names before continuing.");
+    return;
+  }
+
   if (!currentAnonData.length) {
     alert('Please anonymise the data before requesting group suggestions.');
     return;
@@ -365,7 +417,8 @@ Use only the anonymised pupil names (e.g. “Pupil 4”). Keep the explanation c
       <pre id="gpt-output" style="white-space: pre-wrap; word-break: break-word;">${suggestion}</pre>
     `;
 
-    document.getElementById('reveal-button-container').style.display = 'block';
+    const revealContainer = document.getElementById('reveal-button-container');
+    if (revealContainer) revealContainer.style.display = 'block';
   } catch (error) {
     console.error('Error fetching from OpenAI:', error);
     alert('Something went wrong when contacting the API.');
