@@ -380,7 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
         generationStatus.style.display = "none";
       });
 
-      renderReportOutput(pupil, template, fakeSections);
+      renderReportOutput(pupil, template);
       generationStatus.style.display = "none";
       showStep(4);
     }, 800);
