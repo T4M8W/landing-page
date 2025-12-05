@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChalkboardAI – Report Writer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      line-height: 1.5;
+    }
+    h1, h2 {
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .step {
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    .step-header {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .field-group {
+      margin-bottom: 0.75rem;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+    }
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.4rem;
+      font: inherit;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    button {
+      padding: 0.45rem 0.9rem;
+      font: inherit;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #888;
+      background: #f5f5f5;
+    }
+    button.primary {
+      background: #1f7a4d;
+      color: white;
+      border-color: #16603c;
+    }
+    button.small {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+    }
+    .inline {
+      display: inline-flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .section-row {
+      border: 1px solid #eee;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      background: #fafafa;
+    }
+    .section-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .section-row-controls button {
+      margin-left: 0.25rem;
+    }
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .report-section {
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ChalkboardAI – Report Writer</h1>
+
+  <!-- STEP 1: Upload CCR -->
+  <section class="step" id="step-1-upload">
+    <div class="step-header">Step 1 – Upload Central Class Record</div>
+    <p>Upload your anonymised-ready class record (.csv). This will be used to generate reports for each pupil.</p>
+
+    <div class="field-group">
+      <label for="ccrFile">Class Record CSV</label>
+      <input type="file" id="ccrFile" accept=".csv">
+    </div>
+
+    <div class="field-group">
+      <button type="button" class="primary" id="btnParseCCR">Upload &amp; Preview</button>
+    </div>
+
+    <div id="ccrPreview" style="display:none;">
+      <h3>Class Record Preview (Pseudonymised)</h3>
+      <!-- You can inject a small HTML table here with JS -->
+      <div id="ccrPreviewTable"></div>
+      <button type="button" id="btnToTemplate">Continue to Report Template</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: Report Template Builder -->
+  <section class="step" id="step-2-template" style="display:none;">
+    <div class="step-header">Step 2 – Set Up Report Sections</div>
+    <p>
+      Define the sections and word targets for your reports. 
+      You can save this as a template for future use.
+    </p>
+
+    <div id="sectionList">
+      <!-- Example section row (you can clone this with JS) -->
+      <div class="section-row" data-section-index="0">
+        <div class="section-row-header">
+          <span>Section 1</span>
+          <div class="section-row-controls">
+            <button type="button" class="small btn-move-up">↑</button>
+            <button type="button" class="small btn-move-down">↓</button>
+            <button type="button" class="small btn-delete-section">Delete</button>
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div class="field-group">
+            <label>Section name</label>
+            <input type="text" class="section-name" value="English">
+          </div>
+          <div class="field-group">
+            <label>Word target</label>
+            <input type="number" class="section-word-count" value="100" min="20" max="1000">
+          </div>
+        </div>
+
+        <div class="field-group inline">
+          <input type="checkbox" class="section-next-step" id="section-0-next-step" checked>
+          <label for="section-0-next-step">Include next-step sentence</label>
+        </div>
+      </div>
+      <!-- End example section row -->
+    </div>
+
+    <div class="field-group">
+      <button type="button" id="btnAddSection">+ Add Section</button>
+    </div>
+
+    <div class="field-group inline">
+      <button type="button" id="btnSaveTemplate">Save as My Template</button>
+      <button type="button" class="primary" id="btnToTone">Continue to Tone &amp; Style</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: Tone & Style -->
+  <section class="step" id="step-3-tone" style="display:none;">
+    <div class="step-header">Step 3 – Tone &amp; Style</div>
+
+    <div class="field-group">
+      <label>Report tone</label>
+      <div>
+        <label class="inline">
+          <input type="radio" name="tone" value="balanced" checked>
+          Balanced &amp; professional (UK primary)
+        </label>
+      </div>
+      <div>
+        <label class="inline">
+          <input type="radio" name="tone" value="warm">
+          Warm &amp; positive
+        </label>
+      </div>
+      <div>
+        <label class="inline">
+          <input type="radio" name="tone" value="concise">
+          Concise &amp; formal
+        </label>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label for="styleNotes">Optional style notes for the AI</label>
+      <textarea id="styleNotes" placeholder="e.g. Avoid overly formal phrasing. Keep sentences fairly short."></textarea>
+    </div>
+
+    <div class="field-group inline">
+      <button type="button" id="btnToPupilSelect">Continue to Pupil Selection</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: Select Pupil & Generate -->
+  <section class="step" id="step-4-generate" style="display:none;">
+    <div class="step-header">Step 4 – Choose Pupil &amp; Generate</div>
+
+    <div class="field-group">
+      <label for="pupilSelect">Select pupil</label>
+      <select id="pupilSelect">
+        <!-- Options populated with JS: Anon-01, Anon-02, etc. -->
+      </select>
+    </div>
+
+    <div class="field-group">
+      <button type="button" class="primary" id="btnGenerateReport">
+        Generate Report
+      </button>
+    </div>
+
+    <div id="generationStatus" style="display:none;">
+      Generating report…
+    </div>
+  </section>
+
+  <!-- STEP 5: Output & Editing -->
+  <section class="step" id="step-5-output" style="display:none;">
+    <div class="step-header">Step 5 – Review, Edit &amp; Copy</div>
+
+    <p>Edit any sections below, then copy into your school’s report template.</p>
+
+    <div id="reportSections">
+      <!-- Example output structure. You will replace text with AI output. -->
+
+      <!-- Example single section -->
+      <!--
+      <div class="report-section" data-section-name="English">
+        <h3>English</h3>
+        <textarea class="report-text">Generated English comment goes here...</textarea>
+
+        <div class="field-group">
+          <label>Next step (optional)</label>
+          <textarea class="report-next-step">Generated next step...</textarea>
+        </div>
+      </div>
+      -->
+    </div>
+
+    <div class="field-group inline">
+      <button type="button" id="btnCopyAll" class="primary">Copy Entire Report</button>
+      <button type="button" id="btnNextPupil">Generate for Next Pupil</button>
+    </div>
+  </section>
+<script src="script.js"></script>
+</body>
+</html>
