@@ -1,11 +1,7 @@
 // netlify/functions/suggestReports.js
 
-// If your other functions use 'require', stick with that style.
-// Netlify functions run on Node, so this is fine.
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-
 exports.handler = async (event, context) => {
-  // CORS preflight support (if you're calling this from a browser)
+  // CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -21,15 +17,14 @@ exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    console.error("OPENAI_API_KEY is missing");
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
@@ -52,6 +47,7 @@ exports.handler = async (event, context) => {
   const { pupilId, pupilData, template, tone, styleNotes } = payload || {};
 
   if (!pupilId || !pupilData || !Array.isArray(template) || template.length === 0) {
+    console.error("Missing required fields", { pupilId, template });
     return {
       statusCode: 400,
       headers: { "Access-Control-Allow-Origin": "*" },
@@ -61,7 +57,6 @@ exports.handler = async (event, context) => {
 
   // ---------- Build the prompt ----------
 
-  // Tone mapping
   let toneInstruction;
   switch (tone) {
     case "warm":
@@ -106,7 +101,7 @@ RULES:
 - Do not invent safeguarding information, behaviour incidents, family situations, or medical details.
 - Only talk about learning, strengths, needs, classroom learning behaviours, and next steps.
 - Do not include any sensitive safeguarding content; assume this is a general classroom report.
-- Avoid overly casual character labels (e.g. "cheeky chap", "mischievous") unless explicitly instructed; keep descriptions neutral and respectful.
+- Avoid overly casual character labels (e.g. "cheeky chap", "mischievous"); keep descriptions neutral and respectful.
 `;
 
   const userMessage = `
@@ -134,7 +129,7 @@ Example JSON structure (just shape, not content):
   "Teacher Comment": "Overall teacher comment..."
 }
 
-Make sure each main comment roughly matches, but does not exceed, the word target.
+Make sure each main comment roughly matches, but does not hugely exceed, the word target.
 Keep the content grounded in the pupil profile data.
 
 Report sections to generate:
@@ -150,12 +145,13 @@ ${pupilJson}
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // or another model you're using elsewhere
+        model: "gpt-4o-mini", // adjust if you're using a different model
         temperature: 0.4,
+        response_format: { type: "json_object" }, // ask explicitly for JSON
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: userMessage },
@@ -177,12 +173,19 @@ ${pupilJson}
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
 
-    // Model should respond with raw JSON text – parse it.
+    // With response_format: json_object, content should already be plain JSON.
+    let content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") {
+      // Just in case, stringify it
+      content = JSON.stringify(content);
+    }
+
     let jsonOutput;
     try {
-      jsonOutput = JSON.parse(content);
+      // Clean up any stray code fences (belt and braces)
+      const cleaned = content.replace(/```json|```/g, "").trim();
+      jsonOutput = JSON.parse(cleaned);
     } catch (err) {
       console.error("Failed to parse model JSON:", err, "Raw content:", content);
       return {
