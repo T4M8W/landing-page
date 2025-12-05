@@ -54,180 +54,8 @@ const hardcodedNames = [
   'Alex', 'Bailey', 'Charlie', 'Drew', 'Elliot', 'Finley', 'Frankie', 'Harley', 'Jamie',
   'Jayden', 'Jesse', 'Jordan', 'Morgan', 'Riley', 'Rowan', 'Taylor'
 ];
-function displayTable(data, headers) {
-  const table = document.createElement('table');
-  const thead = table.createTHead();
-  const headerRow = thead.insertRow();
 
-  headers.forEach(header => {
-    const th = document.createElement('th');
-    th.textContent = header;
-    headerRow.appendChild(th);
-  });
-
-  const tbody = table.createTBody();
-  data.forEach((row, rowIndex) => {
-    const tr = tbody.insertRow();
-    headers.forEach(header => {
-      const td = tr.insertCell();
-      const cellValue = row[header] !== undefined ? row[header] : '';
-      td.textContent = cellValue;
-      td.style.border = '1px solid #ddd';
-      td.style.padding = '4px';
-    });
-  });
-
-  const outputDiv = document.getElementById('table-container');
-  outputDiv.innerHTML = ''; // Clear previous table
-  outputDiv.appendChild(table);
-}
-
-
-document.getElementById('upload').addEventListener('change', function (e) {
-  const file = e.target.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function (event) {
-    const csv = event.target.result;
-    const parsed = Papa.parse(csv, {
-      header: true,
-      skipEmptyLines: true
-    });
-
-    originalData = parsed.data;
-    headers = parsed.meta.fields;
-    highlightedCells = {}; // reset highlights
-    displayTable(originalData, headers);
-    document.getElementById('results').innerHTML = '';
-  };
-
-  reader.readAsText(file);
-});
-
-document.getElementById('check-names').addEventListener('click', function () {
-  if (!originalData.length) return;
-
-  const nameColumn = headers.find(h => h.toLowerCase() === 'name');
-  const extractedNames = originalData.map(row => row[nameColumn]).filter(Boolean); // ← renamed!
-  const foundNames = [];
-  highlightedCells = {};
-
-  originalData.forEach((row, rowIndex) => {
-  headers.forEach(header => {
-    if (header.toLowerCase() === 'name') return;
-    const cell = row[header];
-    if (!cell) return;
-
-    const cellLower = cell.toLowerCase();
-
-    extractedNames.forEach((name) => {
-      if (!name) return;
-      const nameLower = name.toLowerCase().trim();
-      if (cellLower.includes(nameLower)) {
-        foundNames.push(`Row ${rowIndex + 1}, Column '${header}': "${name}"`);
-        if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
-        highlightedCells[rowIndex][header] = true;
-      }
-    });
-
-    hardcodedNames.forEach(name => {
-      const regex = new RegExp(`\\b${name}\\b`, 'i');
-      if (regex.test(String(cell))) {
-        foundNames.push(`Row ${rowIndex + 1}, Column '${header}': "${name}"`);
-        if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
-        highlightedCells[rowIndex][header] = true;
-      }
-    });
-
-  }); // ✅ this closes headers.forEach
-});   // ✅ this closes originalData.forEach
-
-  displayTable(originalData, headers); // Refresh with highlights
-
-const resultsDiv = document.getElementById('results');
-
-if (foundNames.length > 0) {
-  resultsDiv.innerHTML = `
-    <p style="text-align: center;"><strong>⚠️ The following names were found in notes or comments:</strong></p>
-    <ul style="text-align: center; list-style: none; padding: 0;">
-      ${foundNames.map(name => `<li>${name}</li>`).join('')}
-    </ul>
-    <p style="text-align: center;">Please anonymise these entries before continuing.</p>
-  `;
-} else {
-  resultsDiv.innerHTML = `
-    <p style="text-align: center;"><strong>✅ No names found in notes or comments.</strong></p>
-    <p style="text-align: center;">You’re good to go.</p>
-  `;
-}
-
-
-
-document.getElementById('anonymise').addEventListener('click', function () {
-  if (!originalData.length) return;
-  const anonymised = anonymiseData(originalData, headers);
-  currentAnonData = anonymised; // Save for future use
-  displayTable(anonymised, headers);
-  document.getElementById('results').innerHTML = '<p style="text-align: center;"><strong>✅ Anonymisation complete. Pupil names replaced.</strong></p>';
-
-
-  // 🔁 Move this block here
-  if (Object.keys(pseudoToReal).length > 0) {
-    document.getElementById('toggle-container').style.display = 'block';
-  }
-});
-
-
-function anonymiseData(data, headers) {
-  const nameHeader = headers.find(h => h.toLowerCase() === 'name');
-  pupilNameMap = {};
-
-  const anonymised = data.map((row, index) => {
-    const newRow = { ...row };
-    const originalName = row[nameHeader]?.trim();
-
-  if (originalName) {
-    const pseudonym = `Pupil ${index + 1}`;
-    const lowerName = originalName.toLowerCase();
-
-    pupilNameMap[lowerName] = pseudonym;
-    pseudoToReal[pseudonym] = originalName;
-
-  newRow[nameHeader] = pseudonym;
-}
-
-
-    headers.forEach(header => {
-      if (header === nameHeader) return;
-      let cell = row[header];
-      if (!cell) return;
-
-      Object.keys(pupilNameMap).forEach(realName => {
-        const pseudonym = pupilNameMap[realName];
-        const regex = new RegExp(`\\b${realName}\\b`, 'gi');
-        cell = cell.replace(regex, pseudonym);
-      });
-
-      hardcodedNames.forEach(name => {
-        const pseudonym = Object.entries(pupilNameMap).find(([real]) =>
-          real.includes(name.toLowerCase())
-        )?.[1];
-        if (pseudonym) {
-          const regex = new RegExp(`\\b${name}\\b`, 'gi');
-          cell = cell.replace(regex, pseudonym);
-        }
-      });
-
-      newRow[header] = cell;
-    });
-
-    return newRow;
-  });
-
-  highlightedCells = {}; // clear highlights after anonymising
-  return anonymised;
-}
-
+// Single displayTable used everywhere
 function displayTable(data, headers) {
   const tableContainer = document.getElementById('table-container');
   tableContainer.innerHTML = '';
@@ -271,20 +99,197 @@ function displayTable(data, headers) {
   tableContainer.appendChild(table);
 }
 
-// 🔁 Toggle between anonymised and real view
+// 1) Upload CSV
+document.getElementById('upload').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function (event) {
+    const csv = event.target.result;
+    const parsed = Papa.parse(csv, {
+      header: true,
+      skipEmptyLines: true
+    });
+
+    originalData = parsed.data;
+    headers = parsed.meta.fields || [];
+    highlightedCells = {}; // reset highlights
+
+    displayTable(originalData, headers);
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('toggle-container').style.display = 'none';
+    isAnonView = true;
+    pupilNameMap = {};
+    pseudoToReal = {};
+    currentAnonData = [];
+  };
+
+  reader.readAsText(file);
+});
+
+// 2) Check for names in notes/comments
+document.getElementById('check-names').addEventListener('click', function () {
+  if (!originalData.length) return;
+
+  const nameColumn = headers.find(h => h.toLowerCase() === 'name');
+  if (!nameColumn) {
+    alert("Couldn't find a 'Name' column.");
+    return;
+  }
+
+  const extractedNames = originalData
+    .map(row => row[nameColumn])
+    .filter(Boolean);
+
+  const foundNames = [];
+  highlightedCells = {};
+
+  originalData.forEach((row, rowIndex) => {
+    headers.forEach(header => {
+      if (header.toLowerCase() === 'name') return;
+      const cell = row[header];
+      if (!cell) return;
+
+      const cellLower = String(cell).toLowerCase();
+
+      extractedNames.forEach((name) => {
+        if (!name) return;
+        const nameLower = name.toLowerCase().trim();
+        if (nameLower && cellLower.includes(nameLower)) {
+          foundNames.push(`Row ${rowIndex + 1}, Column '${header}': "${name}"`);
+          if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
+          highlightedCells[rowIndex][header] = true;
+        }
+      });
+
+      hardcodedNames.forEach(name => {
+        const regex = new RegExp(`\\b${name}\\b`, 'i');
+        if (regex.test(String(cell))) {
+          foundNames.push(`Row ${rowIndex + 1}, Column '${header}': "${name}"`);
+          if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
+          highlightedCells[rowIndex][header] = true;
+        }
+      });
+    });
+  });
+
+  displayTable(originalData, headers); // Refresh with highlights
+
+  const resultsDiv = document.getElementById('results');
+
+  if (foundNames.length > 0) {
+    resultsDiv.innerHTML = `
+      <p style="text-align: center;"><strong>⚠️ The following names were found in notes or comments:</strong></p>
+      <ul style="text-align: center; list-style: none; padding: 0;">
+        ${foundNames.map(name => `<li>${name}</li>`).join('')}
+      </ul>
+      <p style="text-align: center;">Please anonymise these entries before continuing.</p>
+    `;
+  } else {
+    resultsDiv.innerHTML = `
+      <p style="text-align: center;"><strong>✅ No names found in notes or comments.</strong></p>
+      <p style="text-align: center;">You’re good to go.</p>
+    `;
+  }
+}); // ✅ closes check-names click handler
+
+// 3) Anonymise data
+document.getElementById('anonymise').addEventListener('click', function () {
+  if (!originalData.length) return;
+
+  const anonymised = anonymiseData(originalData, headers);
+  currentAnonData = anonymised;
+  isAnonView = true; // start in anonymised view
+
+  displayTable(anonymised, headers);
+  document.getElementById('results').innerHTML =
+    '<p style="text-align: center;"><strong>✅ Anonymisation complete. Pupil names replaced.</strong></p>';
+
+  if (Object.keys(pseudoToReal).length > 0) {
+    document.getElementById('toggle-container').style.display = 'block';
+  }
+});
+
+// Pure anonymisation helper
+function anonymiseData(data, headers) {
+  const nameHeader = headers.find(h => h.toLowerCase() === 'name');
+  if (!nameHeader) return data;
+
+  pupilNameMap = {};
+  pseudoToReal = {};
+
+  const anonymised = data.map((row, index) => {
+    const newRow = { ...row };
+    const originalName = row[nameHeader] ? String(row[nameHeader]).trim() : '';
+
+    if (originalName) {
+      const pseudonym = `Pupil ${index + 1}`;
+      const lowerName = originalName.toLowerCase();
+
+      pupilNameMap[lowerName] = pseudonym;
+      pseudoToReal[pseudonym] = originalName;
+
+      newRow[nameHeader] = pseudonym;
+    }
+
+    headers.forEach(header => {
+      if (header === nameHeader) return;
+      let cell = row[header];
+      if (!cell) return;
+
+      // Replace full names from the map
+      Object.keys(pupilNameMap).forEach(realName => {
+        const pseudonym = pupilNameMap[realName];
+        const regex = new RegExp(`\\b${realName}\\b`, 'gi');
+        cell = cell.replace(regex, pseudonym);
+      });
+
+      // Replace single first names that match within full names
+      hardcodedNames.forEach(name => {
+        const matchEntry = Object.entries(pupilNameMap).find(([real]) =>
+          real.includes(name.toLowerCase())
+        );
+        const pseudonym = matchEntry ? matchEntry[1] : null;
+
+        if (pseudonym) {
+          const regex = new RegExp(`\\b${name}\\b`, 'gi');
+          cell = cell.replace(regex, pseudonym);
+        }
+      });
+
+      newRow[header] = cell;
+    });
+
+    return newRow;
+  });
+
+  highlightedCells = {};
+  return anonymised;
+}
+
+// 4) Toggle between anonymised and real view
 document.getElementById('toggle-view').addEventListener('click', function () {
-  isAnonView = !isAnonView;
+  if (!originalData.length || !Object.keys(pupilNameMap).length) return;
 
   const nameHeader = headers.find(h => h.toLowerCase() === 'name');
+  if (!nameHeader) return;
 
-  const displayData = originalData.map(row => {
+  isAnonView = !isAnonView;
+
+  const displayData = originalData.map((row, index) => {
     const newRow = { ...row };
-    const name = row[nameHeader]?.trim();
+    const originalName = row[nameHeader] ? String(row[nameHeader]).trim() : '';
+    const lowerName = originalName.toLowerCase();
+    const pseudonym = `Pupil ${index + 1}`;
 
-    if (name) {
-      newRow[nameHeader] = isAnonView
-        ? pupilNameMap[name.toLowerCase()] || name
-        : pseudoToReal[name] || name;
+    if (isAnonView) {
+      // Show pseudonym
+      newRow[nameHeader] = pupilNameMap[lowerName] || pseudonym;
+    } else {
+      // Show real name
+      newRow[nameHeader] = originalName;
     }
 
     return newRow;
@@ -294,24 +299,22 @@ document.getElementById('toggle-view').addEventListener('click', function () {
   this.textContent = isAnonView ? 'Switch to Real View' : 'Switch to Anon View';
 });
 
+// 5) Ask GPT for group suggestions using anonymised data
 document.getElementById('suggest-groups').addEventListener('click', async () => {
   if (!currentAnonData.length) {
-  alert('Please anonymise the data before requesting group suggestions.');
-  return;
-}
+    alert('Please anonymise the data before requesting group suggestions.');
+    return;
+  }
 
-  // 1. Create an anonymised summary for each pupil
-  // 🔧 Normalise support terms for GPT clarity
-const summaries = currentAnonData.map((row, index) => {
-  const summary = Object.entries(row)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(', ');
-  const clarified = normaliseSupportTerms(summary);
-  return `Pupil ${index + 1}: ${clarified}`;
-}).join('\n');
+  const summaries = currentAnonData.map((row, index) => {
+    const summary = Object.entries(row)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+    const clarified = normaliseSupportTerms(summary);
+    return `Pupil ${index + 1}: ${clarified}`;
+  }).join('\n');
 
-  // 2. Prepare your API key and prompt
-const prompt = `
+  const prompt = `
 Here is a list of anonymised pupils with support needs and characteristics:
 
 ${summaries}
@@ -340,50 +343,46 @@ After forming the groups, write a short explanation for each group. Each explana
 Use only the anonymised pupil names (e.g. “Pupil 4”). Keep the explanation concise and appropriate for a professional setting.
 `;
 
-  // 3. Send to OpenAI
   try {
     const response = await fetch('/api/suggest-groups', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ prompt })
-});
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prompt })
+    });
 
-if (!response.ok) {
-  throw new Error(`OpenAI error: ${response.status} ${response.statusText}`);
-}
+    if (!response.ok) {
+      throw new Error(`OpenAI error: ${response.status} ${response.statusText}`);
+    }
 
-const data = await response.json();
-const suggestion = data.suggestion || 'No response received.';
-rawAnonymisedSuggestion = suggestion; // ✅ Uses the global variable
-console.log('🤖 Suggestion received:', suggestion);
+    const data = await response.json();
+    const suggestion = data.suggestion || 'No response received.';
+    rawAnonymisedSuggestion = suggestion;
 
-
-    // 4. Display the output
     document.getElementById('group-suggestions').innerHTML = `
-  <p><strong>🔒 These groupings use anonymised names only (e.g. Pupil 1).</strong></p>
-  <pre id="gpt-output" style="white-space: pre-wrap; word-break: break-word;">${suggestion}</pre>
-  ` ;
+      <p><strong>🔒 These groupings use anonymised names only (e.g. Pupil 1).</strong></p>
+      <pre id="gpt-output" style="white-space: pre-wrap; word-break: break-word;">${suggestion}</pre>
+    `;
 
-  document.getElementById('reveal-button-container').style.display = 'block';
-
+    document.getElementById('reveal-button-container').style.display = 'block';
   } catch (error) {
     console.error('Error fetching from OpenAI:', error);
     alert('Something went wrong when contacting the API.');
   }
 });
 
+// 6) Reveal real names in GPT output
 const revealBtn = document.getElementById('reveal-names');
 
 if (revealBtn) {
   revealBtn.addEventListener('click', () => {
     console.log('✅ Reveal button clicked');
 
-    const outputElement = document.getElementById("gpt-output");
+    const outputElement = document.getElementById('gpt-output');
 
     if (!rawAnonymisedSuggestion || !outputElement) {
-      alert("Please generate groupings before trying to reveal real names.");
+      alert('Please generate groupings before trying to reveal real names.');
       console.warn('⚠️ Groupings not yet generated or #gpt-output missing.');
       return;
     }
@@ -396,6 +395,5 @@ if (revealBtn) {
     console.log('✅ Real names inserted into output.');
   });
 } else {
-  console.warn("⚠️ Could not find #reveal-names button.");
+  console.warn('⚠️ Could not find #reveal-names button.');
 }
-});
