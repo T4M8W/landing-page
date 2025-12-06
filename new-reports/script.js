@@ -563,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const commentArea = document.createElement("textarea");
       commentArea.className = "report-text";
-      commentArea.value = reidentify(sectionsData[sec.name] || "");
+      commentArea.value = sectionsData[sec.name] || "";
       wrapper.appendChild(commentArea);
 
       if (sec.includeNextStep) {
@@ -576,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const nextArea = document.createElement("textarea");
         nextArea.className = "report-next-step";
-        nextArea.value = reidentify(sectionsData[`${sec.name}_next_step`] || "");
+        nextArea.value = sectionsData[`${sec.name}_next_step`] || "";
         fg.appendChild(nextArea);
 
         wrapper.appendChild(fg);
@@ -626,4 +626,29 @@ document.addEventListener("DOMContentLoaded", () => {
     pupilSelect.value = nextPupil.id;
     showStep(3); // back to pupil selection / generate
   });
+  const btnRevealNames = document.getElementById("btnRevealNames");
+
+if (btnRevealNames) {
+  btnRevealNames.addEventListener("click", () => {
+    const sections = reportSectionsContainer.querySelectorAll(".report-section");
+    if (!sections.length) {
+      alert("No report content to update.");
+      return;
+    }
+
+    sections.forEach((sec) => {
+      const textArea = sec.querySelector(".report-text");
+      if (textArea) {
+        textArea.value = reidentify(textArea.value);
+      }
+      const nextArea = sec.querySelector(".report-next-step");
+      if (nextArea) {
+        nextArea.value = reidentify(nextArea.value);
+      }
+    });
+
+    btnRevealNames.disabled = true;
+    btnRevealNames.textContent = "Names revealed (local only)";
+  });
+}
 });
