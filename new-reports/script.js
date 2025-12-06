@@ -7,6 +7,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let csvHeaders = [];
   let csvNameIndex = -1;
 
+  // Reidentification maps
+  let reidMaps = {
+    pseudoToReal: {},
+    realToPseudo: {}
+  };
+
   // ====== STEP HELPERS ======
   const steps = [
     document.getElementById("step-1-upload"),
@@ -103,6 +109,9 @@ document.addEventListener("DOMContentLoaded", () => {
       csvHeaders = headers;
       csvNameIndex = nameIndex;
 
+      // Build reidentification maps
+      buildReidentificationMaps();
+
       // Render preview and run name check
       renderPreviewAndNameCheck(headers, dataRows, nameIndex);
 
@@ -111,6 +120,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     reader.readAsText(file);
   });
+
+  /**
+   * Build the maps used for reidentification (pseudo <-> real name)
+   */
+  function buildReidentificationMaps() {
+    reidMaps.pseudoToReal = {};
+    reidMaps.realToPseudo = {};
+
+    ccrData.forEach((pupil) => {
+      if (!pupil.id || !pupil.name) return;
+      reidMaps.pseudoToReal[pupil.id] = pupil.name;
+      reidMaps.realToPseudo[pupil.name] = pupil.id;
+    });
+  }
 
   /**
    * Build a preview table showing:
@@ -505,6 +528,22 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   });
 
+  // ====== REIDENTIFICATION UTIL ======
+  function reidentify(text) {
+    if (!text) return text;
+    let out = text;
+
+    Object.keys(reidMaps.pseudoToReal).forEach((pseudo) => {
+      const realName = reidMaps.pseudoToReal[pseudo];
+      if (!realName) return;
+      const safePseudo = pseudo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`\\b${safePseudo}\\b`, "g");
+      out = out.replace(regex, realName);
+    });
+
+    return out;
+  }
+
   // ====== STEP 5: OUTPUT & COPY ======
   const reportSectionsContainer = document.getElementById("reportSections");
   const btnCopyAll = document.getElementById("btnCopyAll");
@@ -524,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const commentArea = document.createElement("textarea");
       commentArea.className = "report-text";
-      commentArea.value = sectionsData[sec.name] || "";
+      commentArea.value = reidentify(sectionsData[sec.name] || "");
       wrapper.appendChild(commentArea);
 
       if (sec.includeNextStep) {
@@ -537,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const nextArea = document.createElement("textarea");
         nextArea.className = "report-next-step";
-        nextArea.value = sectionsData[`${sec.name}_next_step`] || "";
+        nextArea.value = reidentify(sectionsData[`${sec.name}_next_step`] || "");
         fg.appendChild(nextArea);
 
         wrapper.appendChild(fg);
