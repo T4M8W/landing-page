@@ -1,7 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   // ====== STATE ======
-  let ccrData = [];              // [{ id: 'Anon-01', name: 'Pupil Name', rawRow: {...} }]
+  let ccrData = [];              // [{ id, name, rawRow, anonymisedRow }]
   let currentPupilIndex = 0;     // index into ccrData for "next pupil" behaviour
+
+  // Keep headers + name column index for anonymisation
+  let csvHeaders = [];
+  let csvNameIndex = -1;
 
   // ====== STEP HELPERS ======
   const steps = [
@@ -20,12 +24,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   showStep(0); // start at Step 1
 
-  // ====== STEP 1: CCR UPLOAD ======
+  // ====== STEP 1: CCR UPLOAD + NAME CHECK + ANONYMISATION ======
   const ccrFileInput = document.getElementById("ccrFile");
   const btnParseCCR = document.getElementById("btnParseCCR");
   const ccrPreview = document.getElementById("ccrPreview");
   const ccrPreviewTable = document.getElementById("ccrPreviewTable");
   const btnToTemplate = document.getElementById("btnToTemplate");
+  const nameCheckSummary = document.getElementById("nameCheckSummary");
 
   btnParseCCR.addEventListener("click", () => {
     const file = ccrFileInput.files[0];
@@ -37,74 +42,69 @@ document.addEventListener("DOMContentLoaded", () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      // Very simple CSV parsing. You can replace this with PapaParse if you like.
-      const rows = text.trim().split(/\r?\n/).map(r => r.split(","));
-      const headers = rows[0].map(h => h.trim());
-      const dataRows = rows.slice(1);
 
-      // Find a "Name" column if possible
-      const nameIndex = headers.findIndex(h => h.toLowerCase() === "name" || h.toLowerCase() === "pupil" || h.toLowerCase() === "pupil name");
+      // Very simple CSV parsing; you can swap for PapaParse later.
+      const rows = text
+        .trim()
+        .split(/\r?\n/)
+        .map((r) => r.split(","));
 
-      if (nameIndex === -1) {
-        alert("Couldn't find a 'Name' or 'Pupil' column in the CSV. Please check your file.");
+      if (!rows.length) {
+        alert("File appears to be empty.");
         return;
       }
 
-      // Build ccrData with simple pseudonyms for now (Anon-01 etc.)
+      const headers = rows[0].map((h) => h.trim());
+      const dataRows = rows.slice(1);
+
+      // Find a "Name" column if possible
+      const nameIndex = headers.findIndex((h) => {
+        const lower = h.toLowerCase();
+        return (
+          lower === "name" ||
+          lower === "pupil" ||
+          lower === "pupil name"
+        );
+      });
+
+      if (nameIndex === -1) {
+        alert(
+          "Couldn't find a 'Name', 'Pupil' or 'Pupil Name' column in the CSV. Please check your file."
+        );
+        return;
+      }
+
+      // Build ccrData with pseudonyms; keep rawRow as header-keyed object
       ccrData = dataRows
-        .filter(row => row[nameIndex] && row[nameIndex].trim() !== "")
+        .filter((row) => row[nameIndex] && row[nameIndex].trim() !== "")
         .map((row, idx) => {
           const displayName = row[nameIndex].trim();
           const pseudoId = `Anon-${String(idx + 1).padStart(2, "0")}`;
 
-          // Build a simple rawRow object keyed by header
           const rawRow = {};
-          headers.forEach((h, i) => { rawRow[h] = row[i] || ""; });
+          headers.forEach((h, i) => {
+            rawRow[h] = row[i] || "";
+          });
 
           return {
             id: pseudoId,
-            name: displayName,
-            rawRow
+            name: displayName, // local only
+            rawRow,
+            anonymisedRow: null, // will be filled after anonymisation
           };
         });
 
-      if (ccrData.length === 0) {
+      if (!ccrData.length) {
         alert("No pupil rows found. Please check your CSV.");
         return;
       }
 
-      // Render a simple preview table (pseudonym + name)
-      const table = document.createElement("table");
-      table.style.width = "100%";
-      table.style.borderCollapse = "collapse";
-      const headerRow = document.createElement("tr");
-      ["Pseudonym", "Name (local only)"].forEach(h => {
-        const th = document.createElement("th");
-        th.textContent = h;
-        th.style.borderBottom = "1px solid #ccc";
-        th.style.textAlign = "left";
-        th.style.padding = "4px";
-        table.appendChild(headerRow);
-        headerRow.appendChild(th);
-      });
+      // Save header + name column index for later anonymisation
+      csvHeaders = headers;
+      csvNameIndex = nameIndex;
 
-      ccrData.forEach(pupil => {
-        const tr = document.createElement("tr");
-        const td1 = document.createElement("td");
-        const td2 = document.createElement("td");
-        td1.textContent = pupil.id;
-        td2.textContent = pupil.name;
-        [td1, td2].forEach(td => {
-          td.style.padding = "4px";
-          td.style.borderBottom = "1px solid #eee";
-        });
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        table.appendChild(tr);
-      });
-
-      ccrPreviewTable.innerHTML = "";
-      ccrPreviewTable.appendChild(table);
+      // Render preview and run name check
+      renderPreviewAndNameCheck(headers, dataRows, nameIndex);
 
       ccrPreview.style.display = "block";
     };
@@ -112,12 +112,158 @@ document.addEventListener("DOMContentLoaded", () => {
     reader.readAsText(file);
   });
 
+  /**
+   * Build a preview table showing:
+   * - Pseudonym (first column)
+   * - All CCR columns
+   * Also runs a simple name scan: it looks for any pupil names from the Name column
+   * appearing in any *other* column. If found, we block progress.
+   */
+  function renderPreviewAndNameCheck(headers, dataRows, nameIndex) {
+    // Clear old content
+    ccrPreviewTable.innerHTML = "";
+    nameCheckSummary.textContent = "";
+    btnToTemplate.disabled = true;
+
+    // Collect the list of pupil names from the Name column
+    const pupilNames = dataRows
+      .map((row) => (row[nameIndex] || "").trim())
+      .filter((x) => x !== "");
+
+    // Helper: does a cell contain any pupil name as a separate word?
+    function cellContainsName(cellValue) {
+      if (!cellValue) return null;
+      const text = String(cellValue);
+      for (const name of pupilNames) {
+        if (!name) continue;
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`\\b${escaped}\\b`, "i");
+        if (regex.test(text)) return name;
+      }
+      return null;
+    }
+
+    // Build the table
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+    table.style.fontSize = "0.9rem";
+
+    // Header row: Pseudonym + all headers
+    const headerRow = document.createElement("tr");
+
+    function addCell(tr, text, isHeader = false) {
+      const cell = document.createElement(isHeader ? "th" : "td");
+      cell.textContent = text;
+      cell.style.padding = "4px";
+      cell.style.borderBottom = "1px solid #ccc";
+      cell.style.textAlign = "left";
+      if (isHeader) {
+        cell.style.fontWeight = "600";
+      }
+      tr.appendChild(cell);
+      return cell;
+    }
+
+    addCell(headerRow, "Pseudonym", true);
+    headers.forEach((h) => addCell(headerRow, h, true));
+    table.appendChild(headerRow);
+
+    // Data rows
+    const flaggedCells = [];
+
+    dataRows.forEach((row, rowIdx) => {
+      const tr = document.createElement("tr");
+
+      // Pseudonym from ccrData (same order)
+      const pseudoId = ccrData[rowIdx]?.id || `Anon-${String(rowIdx + 1).padStart(2, "0")}`;
+      const pseudoCell = addCell(tr, pseudoId, false);
+      pseudoCell.style.fontWeight = "600";
+
+      headers.forEach((h, colIdx) => {
+        const cellValue = row[colIdx] || "";
+        const td = addCell(tr, cellValue, false);
+
+        // Name check: only scan non-name columns
+        if (colIdx !== nameIndex) {
+          const matchedName = cellContainsName(cellValue);
+          if (matchedName) {
+            flaggedCells.push({
+              rowIndex: rowIdx,
+              colIndex: colIdx,
+              matchedName,
+              value: cellValue,
+            });
+            td.style.backgroundColor = "#fff3cd"; // light amber
+            td.style.borderBottom = "1px solid #f0c36d";
+            td.title = `Contains pupil name: "${matchedName}"`;
+          }
+        }
+      });
+
+      table.appendChild(tr);
+    });
+
+    ccrPreviewTable.appendChild(table);
+
+    // Name-check summary + button gating
+    if (flaggedCells.length > 0) {
+      const uniqueMatches = Array.from(
+        new Set(flaggedCells.map((f) => `"${f.matchedName}"`))
+      ).join(", ");
+      nameCheckSummary.style.color = "#b94a48";
+      nameCheckSummary.textContent =
+        `Name check: found ${flaggedCells.length} cell(s) containing pupil name(s) in other columns: ${uniqueMatches}. ` +
+        `Please fix your CCR (remove or replace these names) and re-upload before continuing.`;
+      btnToTemplate.disabled = true;
+    } else {
+      nameCheckSummary.style.color = "#3c763d";
+      nameCheckSummary.textContent =
+        "Name check: no pupil names were found in other columns. You can safely anonymise and continue.";
+      btnToTemplate.disabled = false;
+    }
+  }
+
+  /**
+   * Replace the Name column in each CCR row with the pseudonym, and store that
+   * as `anonymisedRow`. This is what we send to the backend.
+   */
+  function anonymiseCcrData() {
+    if (!csvHeaders.length || csvNameIndex === -1) return;
+
+    const nameHeader = csvHeaders[csvNameIndex];
+
+    ccrData.forEach((pupil) => {
+      const anonymisedRow = { ...pupil.rawRow };
+
+      // Replace the name column with the pseudonym
+      if (nameHeader in anonymisedRow) {
+        anonymisedRow[nameHeader] = pupil.id;
+      }
+
+      // OPTIONAL: scrub any obviously sensitive columns here by header
+      // e.g. delete anonymisedRow["UPN"]; delete anonymisedRow["DOB"]; etc.
+
+      pupil.anonymisedRow = anonymisedRow;
+    });
+  }
+
   btnToTemplate.addEventListener("click", () => {
     if (!ccrData.length) {
       alert("Please upload and preview your class record first.");
       return;
     }
-    showStep(1);
+
+    // Final safeguard: don’t move on if we somehow re-disabled it
+    if (btnToTemplate.disabled) {
+      alert("Please resolve all name-check issues before continuing.");
+      return;
+    }
+
+    // Anonymise CCR rows in memory before any AI calls happen
+    anonymiseCcrData();
+
+    showStep(1); // Step 2: template builder
   });
 
   // ====== STEP 2: TEMPLATE BUILDER ======
@@ -125,9 +271,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAddSection = document.getElementById("btnAddSection");
   const btnSaveTemplate = document.getElementById("btnSaveTemplate");
   const btnToTone = document.getElementById("btnToTone");
-  // Grab the initial section-row from the HTML as our template
-const sectionTemplate = sectionList.querySelector(".section-row");
 
+  // Grab the initial section-row from the HTML as our template
+  const sectionTemplate = sectionList.querySelector(".section-row");
 
   // Helper to renumber section headers (Section 1, Section 2, etc.)
   function renumberSectionHeaders() {
@@ -139,7 +285,9 @@ const sectionTemplate = sectionList.querySelector(".section-row");
       const nextStepCheckbox = row.querySelector(".section-next-step");
       if (nextStepCheckbox) {
         nextStepCheckbox.id = `section-${idx}-next-step`;
-        const label = row.querySelector("label[for^='section-'][for$='-next-step']");
+        const label = row.querySelector(
+          "label[for^='section-'][for$='-next-step']"
+        );
         if (label) {
           label.setAttribute("for", `section-${idx}-next-step`);
         }
@@ -147,31 +295,30 @@ const sectionTemplate = sectionList.querySelector(".section-row");
     });
   }
 
-  // Clone the first section-row as a template for new sections
-function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
-  if (!sectionTemplate) {
-    console.error("No sectionTemplate found in HTML");
-    return null;
+  function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
+    if (!sectionTemplate) {
+      console.error("No sectionTemplate found in HTML");
+      return null;
+    }
+
+    const clone = sectionTemplate.cloneNode(true);
+    const idx = sectionList.querySelectorAll(".section-row").length;
+
+    clone.dataset.sectionIndex = idx;
+    const headerSpan = clone.querySelector(".section-row-header span");
+    if (headerSpan) headerSpan.textContent = `Section ${idx + 1}`;
+
+    const nameInput = clone.querySelector(".section-name");
+    const wordInput = clone.querySelector(".section-word-count");
+    const nextStepCheckbox = clone.querySelector(".section-next-step");
+
+    if (nameInput) nameInput.value = name || `Section ${idx + 1}`;
+    if (wordInput) wordInput.value = wordCount;
+    if (nextStepCheckbox) nextStepCheckbox.checked = includeNextStep;
+
+    wireSectionRowControls(clone);
+    return clone;
   }
-
-  const clone = sectionTemplate.cloneNode(true);
-  const idx = sectionList.querySelectorAll(".section-row").length;
-
-  clone.dataset.sectionIndex = idx;
-  const headerSpan = clone.querySelector(".section-row-header span");
-  if (headerSpan) headerSpan.textContent = `Section ${idx + 1}`;
-
-  const nameInput = clone.querySelector(".section-name");
-  const wordInput = clone.querySelector(".section-word-count");
-  const nextStepCheckbox = clone.querySelector(".section-next-step");
-
-  if (nameInput) nameInput.value = name || `Section ${idx + 1}`;
-  if (wordInput) wordInput.value = wordCount;
-  if (nextStepCheckbox) nextStepCheckbox.checked = includeNextStep;
-
-  wireSectionRowControls(clone);
-  return clone;
-}
 
   function wireSectionRowControls(row) {
     const btnUp = row.querySelector(".btn-move-up");
@@ -226,14 +373,14 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
   function getCurrentTemplateConfig() {
     const rows = sectionList.querySelectorAll(".section-row");
     const sections = [];
-    rows.forEach(row => {
+    rows.forEach((row) => {
       const nameInput = row.querySelector(".section-name");
       const wordInput = row.querySelector(".section-word-count");
       const nextStepCheckbox = row.querySelector(".section-next-step");
       sections.push({
         name: nameInput.value.trim() || "Section",
         wordTarget: Number(wordInput.value) || 100,
-        includeNextStep: nextStepCheckbox.checked
+        includeNextStep: nextStepCheckbox.checked,
       });
     });
     return sections;
@@ -247,13 +394,8 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
       // Remove the initial row and rebuild
       sectionList.innerHTML = "";
       sections.forEach((s, idx) => {
-        if (idx === 0) {
-          const base = createSectionRow(s.name, s.wordTarget, s.includeNextStep);
-          sectionList.appendChild(base);
-        } else {
-          const row = createSectionRow(s.name, s.wordTarget, s.includeNextStep);
-          sectionList.appendChild(row);
-        }
+        const row = createSectionRow(s.name, s.wordTarget, s.includeNextStep);
+        sectionList.appendChild(row);
       });
       renumberSectionHeaders();
     } catch (e) {
@@ -277,14 +419,13 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
   function getSelectedTone() {
     const toneRadios = document.querySelectorAll("input[name='tone']");
     let value = "balanced";
-    toneRadios.forEach(r => {
+    toneRadios.forEach((r) => {
       if (r.checked) value = r.value;
     });
     return value;
   }
 
   btnToPupilSelect.addEventListener("click", () => {
-    // You could validate here if needed
     populatePupilSelect();
     showStep(3);
   });
@@ -296,7 +437,7 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
 
   function populatePupilSelect() {
     pupilSelect.innerHTML = "";
-    ccrData.forEach((pupil, idx) => {
+    ccrData.forEach((pupil) => {
       const opt = document.createElement("option");
       opt.value = pupil.id;
       opt.textContent = `${pupil.id} – ${pupil.name}`;
@@ -314,7 +455,7 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
       return;
     }
     const selectedId = pupilSelect.value;
-    const pupil = ccrData.find(p => p.id === selectedId);
+    const pupil = ccrData.find((p) => p.id === selectedId);
     if (!pupil) {
       alert("Please select a valid pupil.");
       return;
@@ -324,42 +465,21 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
     const tone = getSelectedTone();
     const styleNotes = styleNotesInput.value.trim();
 
+    // IMPORTANT: send anonymisedRow if we have it; fall back to rawRow
+    const pupilRowForBackend = pupil.anonymisedRow || pupil.rawRow;
+
     const payload = {
-      pupilId: pupil.id,            // pseudonym
-      pupilName: pupil.name,        // local only, not sent if you anonymise on backend
-      pupilData: pupil.rawRow,      // CCR row (you may strip/transform this before sending)
+      pupilId: pupil.id,             // pseudonym only
+      pupilData: pupilRowForBackend, // anonymised CCR row
       template,
       tone,
-      styleNotes
+      styleNotes,
+      // pupilName: pupil.name,      // keep local only; not needed by backend
     };
 
-    // Show "Generating..."
     generationStatus.style.display = "block";
 
-    // === BACKEND CALL PLACEHOLDER ===
-    // Replace this with a real fetch to your backend.
-    // Example:
-    //
-    // fetch("/api/generate-report", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(payload)
-    // })
-    // .then(res => res.json())
-    // .then(data => {
-    //   renderReportOutput(pupil, template, data);
-    // })
-    // .catch(err => {
-    //   console.error(err);
-    //   alert("There was an error generating the report.");
-    // })
-    // .finally(() => {
-    //   generationStatus.style.display = "none";
-    // });
-
-    // For now, we’ll mock a response so you can develop the frontend:
-    setTimeout(() => {
-          fetch("/.netlify/functions/suggestReports", {
+    fetch("/.netlify/functions/suggestReports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -373,8 +493,6 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
         return res.json();
       })
       .then((data) => {
-        // data should be an object like:
-        // { "English": "...", "English_next_step": "...", ... }
         renderReportOutput(pupil, template, data);
         showStep(4);
       })
@@ -385,11 +503,6 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
       .finally(() => {
         generationStatus.style.display = "none";
       });
-
-      renderReportOutput(pupil, template);
-      generationStatus.style.display = "none";
-      showStep(4);
-    }, 800);
   });
 
   // ====== STEP 5: OUTPUT & COPY ======
@@ -397,13 +510,10 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
   const btnCopyAll = document.getElementById("btnCopyAll");
   const btnNextPupil = document.getElementById("btnNextPupil");
 
-  function renderReportOutput(pupil, template, sectionsData) {
-    // sectionsData is expected like:
-    // { "English": "...", "English_next_step": "...", "Maths": "..." }
-
+  function renderReportOutput(pupil, template, sectionsData = {}) {
     reportSectionsContainer.innerHTML = "";
 
-    template.forEach(sec => {
+    template.forEach((sec) => {
       const wrapper = document.createElement("div");
       wrapper.className = "report-section";
       wrapper.dataset.sectionName = sec.name;
@@ -436,7 +546,6 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
       reportSectionsContainer.appendChild(wrapper);
     });
 
-    // Move to output step
     showStep(4);
   }
 
@@ -448,7 +557,7 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
     }
 
     let combined = "";
-    sections.forEach(sec => {
+    sections.forEach((sec) => {
       const title = sec.querySelector("h3").textContent;
       const text = sec.querySelector(".report-text").value.trim();
       const nextStep = sec.querySelector(".report-next-step")
@@ -476,9 +585,6 @@ function createSectionRow(name = "", wordCount = 100, includeNextStep = false) {
     currentPupilIndex = (currentPupilIndex + 1) % ccrData.length;
     const nextPupil = ccrData[currentPupilIndex];
     pupilSelect.value = nextPupil.id;
-    // Optionally auto-generate for the next pupil:
-    // btnGenerateReport.click();
-    showStep(3); // go back to pupil selection/generation step
+    showStep(3); // back to pupil selection / generate
   });
 });
-

@@ -120,8 +120,17 @@
       <h3>Class Record Preview (Pseudonymised)</h3>
       <!-- You can inject a small HTML table here with JS -->
       <div id="ccrPreviewTable"></div>
-      <button type="button" id="btnToTemplate">Continue to Report Template</button>
-    </div>
+
+<div id="nameCheckSummary" style="margin-top:0.5rem; font-size:0.9rem;"></div>
+<div id="nameCheckHelp" style="margin-top:0.25rem; font-size:0.85rem; color:#555;">
+  This check looks for any pupil names appearing in other columns of the file.
+  If names are found, fix your Central Class Record and re-upload before continuing.
+</div>
+
+<button type="button" id="btnToTemplate" class="primary" disabled>
+  Anonymise &amp; Continue to Report Template
+</button>
+
   </section>
 
   <!-- STEP 2: Report Template Builder -->
