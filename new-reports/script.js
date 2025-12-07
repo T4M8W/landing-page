@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // CSV structure
   let csvHeaders = [];
   let csvNameIndex = -1;
+  let csvDataRows = [];          // raw data rows for preview + checks
 
   // Name mapping + reidentification maps
   let pupilNameMap = {}; // lowercased full name -> "Pupil N"
@@ -64,11 +65,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const ccrPreviewTable  = document.getElementById("ccrPreviewTable");
   const nameCheckSummary = document.getElementById("nameCheckSummary");
 
-  // 1) Check for names = parse + preview + strong name scan
-  btnCheckNames.addEventListener("click", () => {
+  // initial button state (like Groups)
+  if (btnCheckNames)  btnCheckNames.disabled  = true;
+  if (btnAnonymise)   btnAnonymise.disabled   = true;
+  if (btnToTemplate)  btnToTemplate.disabled  = true;
+
+  // When a file is chosen: parse + raw preview (NO checks yet)
+  ccrFileInput.addEventListener("change", () => {
     const file = ccrFileInput.files[0];
+
     if (!file) {
-      alert("Please choose a CSV file first.");
+      // reset UI if file cleared
+      ccrPreviewTable.innerHTML = "";
+      ccrPreview.style.display = "none";
+      nameCheckSummary.textContent = "";
+      namesAreClean = false;
+      if (btnCheckNames)  btnCheckNames.disabled  = true;
+      if (btnAnonymise)   btnAnonymise.disabled   = true;
+      if (btnToTemplate)  btnToTemplate.disabled  = true;
       return;
     }
 
@@ -119,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           return {
             id: pseudoId,
-            name: displayName, // local only
+            name: displayName,
             rawRow,
             anonymisedRow: null,
           };
@@ -132,19 +146,82 @@ document.addEventListener("DOMContentLoaded", () => {
 
       csvHeaders   = headers;
       csvNameIndex = nameIndex;
+      csvDataRows  = dataRows;
 
-      // Reset maps and gating
+      // reset name maps + gating
       pupilNameMap = {};
       reidMaps     = { pseudoToReal: {}, realToPseudo: {} };
       namesAreClean = false;
-      btnAnonymise.disabled  = true;
-      btnToTemplate.disabled = true;
 
-      renderPreviewAndNameCheck(headers, dataRows, nameIndex);
+      if (btnCheckNames) {
+        btnCheckNames.disabled = false;
+      }
+      if (btnAnonymise)  btnAnonymise.disabled  = true;
+      if (btnToTemplate) btnToTemplate.disabled = true;
+
+      nameCheckSummary.style.color = "#555";
+      nameCheckSummary.textContent =
+        "Preview loaded. When you're ready, click 'Check for names' to scan for pupil names before anonymising.";
+
+      renderRawPreview(headers, dataRows, nameIndex);
       ccrPreview.style.display = "block";
     };
 
     reader.readAsText(file);
+  });
+
+  /**
+   * Raw preview (no checks, no highlights) – matches Groups behaviour
+   */
+  function renderRawPreview(headers, dataRows, nameIndex) {
+    ccrPreviewTable.innerHTML = "";
+
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+    table.style.fontSize = "0.9rem";
+
+    const headerRow = document.createElement("tr");
+
+    function addCell(tr, text, isHeader = false) {
+      const cell = document.createElement(isHeader ? "th" : "td");
+      cell.textContent = text;
+      cell.style.padding = "4px";
+      cell.style.borderBottom = "1px solid #ccc";
+      cell.style.textAlign = "left";
+      if (isHeader) cell.style.fontWeight = "600";
+      tr.appendChild(cell);
+      return cell;
+    }
+
+    addCell(headerRow, "Pseudonym", true);
+    headers.forEach((h) => addCell(headerRow, h, true));
+    table.appendChild(headerRow);
+
+    dataRows.forEach((row, rowIdx) => {
+      const tr = document.createElement("tr");
+      const pseudoId = ccrData[rowIdx]?.id || `Pupil ${rowIdx + 1}`;
+      const pseudoCell = addCell(tr, pseudoId, false);
+      pseudoCell.style.fontWeight = "600";
+
+      headers.forEach((h, colIdx) => {
+        const cellValue = row[colIdx] || "";
+        addCell(tr, cellValue, false);
+      });
+
+      table.appendChild(tr);
+    });
+
+    ccrPreviewTable.appendChild(table);
+  }
+
+  // 1) Check for names – run strong scan using existing csvHeaders + csvDataRows
+  btnCheckNames.addEventListener("click", () => {
+    if (!csvHeaders.length || !csvDataRows.length) {
+      alert("Please upload a class record first.");
+      return;
+    }
+    renderPreviewAndNameCheck(csvHeaders, csvDataRows, csvNameIndex);
   });
 
   /**
@@ -327,7 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2) Anonymise button
   btnAnonymise.addEventListener("click", () => {
     if (!ccrData.length) {
-      alert("Please check the file for names first.");
+      alert("Please upload and check the file for names first.");
       return;
     }
     if (!namesAreClean) {
