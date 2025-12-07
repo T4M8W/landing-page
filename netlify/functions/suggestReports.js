@@ -55,6 +55,32 @@ exports.handler = async (event, context) => {
     };
   }
 
+  // ---------- Pronoun / gender handling ----------
+
+  const pronounsRaw =
+    pupilData.Pronouns ??
+    pupilData.pronouns ??
+    pupilData.Gender ??
+    pupilData.gender ??
+    "";
+
+  let subjectPronoun = "they";
+  let objectPronoun = "them";
+  let possessivePronoun = "their";
+
+  const lowerPronouns = String(pronounsRaw).toLowerCase();
+
+  if (lowerPronouns.includes("he")) {
+    subjectPronoun = "he";
+    objectPronoun = "him";
+    possessivePronoun = "his";
+  } else if (lowerPronouns.includes("she")) {
+    subjectPronoun = "she";
+    objectPronoun = "her";
+    possessivePronoun = "her";
+  }
+  // If nothing useful is provided, we fall back to they/them/their.
+
   // ---------- Build the prompt ----------
 
   let toneInstruction;
@@ -100,8 +126,10 @@ RULES:
 - Keep the tone appropriate for UK primary reports: parent-facing, professional, kind, and specific.
 - Do not invent safeguarding information, behaviour incidents, family situations, or medical details.
 - Only talk about learning, strengths, needs, classroom learning behaviours, and next steps.
-- Do not include any sensitive safeguarding content; assume this is a general classroom report.
 - Avoid overly casual character labels (e.g. "cheeky chap", "mischievous"); keep descriptions neutral and respectful.
+⭐ - Only include information that is supported by the CCR data or safe, generic primary-report norms.
+⭐ - Do NOT invent test outcomes, specific incidents, or detailed anecdotes.
+⭐ - If CCR data is sparse, write general but professional learning comments.
 `;
 
   const userMessage = `
@@ -112,32 +140,46 @@ ${extraStyle}
 You will be given:
 
 1) A pseudonym for the pupil (do not try to guess their real name).
-2) A single "pupil profile" row from a class record (CCR).
-3) A list of report sections with word targets and whether they need a separate "next step" sentence.
+2) A single "pupil profile" row from the class record (CCR).
+3) A list of report sections with word targets and next-step requirements.
 
-Generate a JSON object ONLY, with no extra text. The JSON should have:
-- One key for each section's main comment, using the section name as the key.
-- If the section has a next step, add another key named "<section name>_next_step" for a single-sentence target.
+Use gendered pronouns that match this pupil:
 
-Example JSON structure (just shape, not content):
+- Subject pronoun: "${subjectPronoun}"
+- Object pronoun: "${objectPronoun}"
+- Possessive pronoun: "${possessivePronoun}"
+
+Use the pseudonym "${pupilId}" sparingly:
+- Use it once at the start of the first paragraph.
+- After that, normally use pronouns so the report flows naturally.
+- Never repeat the pseudonym more than twice in any section.
+
+For each report section:
+⭐ - Write between 0.9 × wordTarget and 1.1 × wordTarget words.
+⭐ - Never write fewer than 0.9 × wordTarget words.
+⭐ - Keep the content focused ONLY on that section's topic.
+⭐ - Use varied sentence structures; avoid repetition.
+⭐ - Ground all claims in what the CCR data reasonably implies.
+
+Generate a JSON object ONLY, with:
+- One key per section: "<section name>"
+- If next steps are required: "<section name>_next_step"
+
+The JSON must contain no commentary outside the object.
+
+Example:
 
 {
-  "English": "Main English comment...",
-  "English_next_step": "Next step sentence...",
-  "Maths": "Main Maths comment...",
-  "Maths_next_step": "Next step sentence...",
-  "Teacher Comment": "Overall teacher comment..."
+  "English": "Main English comment…",
+  "English_next_step": "Next step…",
+  "Maths": "Main Maths comment…",
+  "Maths_next_step": "Next step…",
+  "Teacher Comment": "Final paragraph…"
 }
-
-Make sure each main comment roughly matches, but does not hugely exceed, the word target.
-Keep the content grounded in the pupil profile data.
-
-Report sections to generate:
-${sectionsDescription}
 
 Pupil pseudonym: ${pupilId}
 
-Pupil profile (one row from the class record):
+Pupil profile (CCR data):
 ${pupilJson}
 `;
 
