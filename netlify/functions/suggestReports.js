@@ -161,6 +161,35 @@ For each report section:
 ⭐ - Use varied sentence structures; avoid repetition.
 ⭐ - Ground all claims in what the CCR data reasonably implies.
 
+SECTION CONTENT:
+- Each section must focus ONLY on its named topic.
+- For subjects with clear matching CCR columns (e.g. Reading, Writing, Maths), base your comments as directly as possible on those columns.
+- For subjects with no obvious CCR column (e.g. Science if no science-specific data is present), you MAY write a safe, general comment that reflects typical learning in that subject for this pupil’s age, but keep it measured and professional.
+- If the CCR gives little or no information related to a section, treat that section as "data-sparse": write a general but appropriate comment and mark it as such in the JSON meta data (see OUTPUT FORMAT).
+
+SPECIAL CASE – TEACHER / GENERAL / OVERALL COMMENT (or similar) SECTIONS:
+- If a section name suggests an overall or general comment (e.g. contains "Teacher", "General", or "Overall"),
+  then you MUST synthesise information from across the whole CCR row, not just one column.
+- In these sections, draw briefly on key strengths, needs, and attitudes visible across subjects.
+- Still obey the word count rules, and keep the tone consistent with the rest of the report.
+- Mark these sections as "synthesised" in the JSON meta data (see OUTPUT FORMAT).
+
+OUTPUT FORMAT:
+Return ONLY a JSON object with:
+- One key per section: "<section name>" for the main comment text.
+- If a next step is requested: "<section name>_next_step" for the next-step sentence.
+- An optional source key per section: "<section name>_source" with one of:
+  - "direct"      → comment based mainly on clearly relevant CCR columns
+  - "synthesised" → comment synthesises information across multiple CCR columns
+  - "generic"     → comment is a safe, general statement because little/no relevant data was present
+
+No explanations or text outside the JSON object.
+
+SOURCE LABELS:
+- Use "direct" when the section comment is clearly grounded in matching CCR columns (e.g. Reading, Writing, Maths).
+- Use "synthesised" for overall/teacher/general comments that draw from several columns.
+- Use "generic" where there is little or no relevant CCR data and you needed to rely on safe, general statements.
+
 Generate a JSON object ONLY, with:
 - One key per section: "<section name>"
 - If next steps are required: "<section name>_next_step"

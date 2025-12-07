@@ -952,6 +952,27 @@ const rows = parsed.data;
 
       wrapper.appendChild(copyBtn);
 
+      // SOURCE BADGE (optional label showing where the comment came from)
+const source = sectionsData[`${sec.name}_source`];
+if (source) {
+  const badge = document.createElement("div");
+  badge.className = "source-badge";
+  badge.style.fontSize = "0.75rem";
+  badge.style.opacity = "0.7";
+  badge.style.marginTop = "4px";
+
+  badge.textContent =
+    source === "direct"
+      ? "Based on CCR subject data"
+      : source === "synthesised"
+      ? "Based on whole-profile data"
+      : source === "generic"
+      ? "General comment (limited CCR data)"
+      : "";
+
+  wrapper.appendChild(badge);
+}
+
       reportSectionsContainer.appendChild(wrapper);
     });
 
