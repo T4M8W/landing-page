@@ -102,36 +102,35 @@
 
   <h1>ChalkboardAI – Report Writer</h1>
 
-  <!-- STEP 1: Upload CCR -->
-  <section class="step" id="step-1-upload">
-    <div class="step-header">Step 1 – Upload Central Class Record</div>
-    <p>Upload your anonymised-ready class record (.csv). This will be used to generate reports for each pupil.</p>
+  <!-- STEP 1: Upload & anonymise CCR -->
+<section id="step-1-upload">
+  <h2>Step 1 – Upload and anonymise your class record</h2>
 
-    <div class="field-group">
-      <label for="ccrFile">Class Record CSV</label>
-      <input type="file" id="ccrFile" accept=".csv">
-    </div>
+  <div class="field-group">
+    <label for="ccrFile">Upload your class record (.csv)</label>
+    <input type="file" id="ccrFile" accept=".csv">
+  </div>
 
-    <div class="field-group">
-      <button type="button" class="primary" id="btnParseCCR">Upload &amp; Preview</button>
-    </div>
+  <div class="button-row">
+    <button id="btnCheckNames" type="button">
+      1. Check for names
+    </button>
+    <button id="btnAnonymise" type="button" disabled>
+      2. Anonymise class record
+    </button>
+    <button id="btnToTemplate" type="button" disabled>
+      3. Next: choose report sections
+    </button>
+  </div>
 
-    <div id="ccrPreview" style="display:none;">
-      <h3>Class Record Preview (Pseudonymised)</h3>
-      <!-- You can inject a small HTML table here with JS -->
-      <div id="ccrPreviewTable"></div>
+  <p id="nameCheckSummary" class="helper-text"></p>
 
-<div id="nameCheckSummary" style="margin-top:0.5rem; font-size:0.9rem;"></div>
-<div id="nameCheckHelp" style="margin-top:0.25rem; font-size:0.85rem; color:#555;">
-  This check looks for any pupil names appearing in other columns of the file.
-  If names are found, fix your Central Class Record and re-upload before continuing.
-</div>
+  <div id="ccrPreview" style="display:none; margin-top:1rem;">
+    <h3>Preview (anonymisation check)</h3>
+    <div id="ccrPreviewTable"></div>
+  </div>
+</section>
 
-<button type="button" id="btnToTemplate" class="primary" disabled>
-  Anonymise &amp; Continue to Report Template
-</button>
-
-  </section>
 
   <!-- STEP 2: Report Template Builder -->
   <section class="step" id="step-2-template" style="display:none;">

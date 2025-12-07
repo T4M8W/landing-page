@@ -1,17 +1,41 @@
 document.addEventListener("DOMContentLoaded", () => {
   // ====== STATE ======
   let ccrData = [];              // [{ id, name, rawRow, anonymisedRow }]
-  let currentPupilIndex = 0;     // index into ccrData for "next pupil" behaviour
+  let currentPupilIndex = 0;     // index into ccrData
 
-  // Keep headers + name column index for anonymisation
+  // CSV structure
   let csvHeaders = [];
   let csvNameIndex = -1;
 
-  // Reidentification maps
+  // Name mapping + reidentification maps
+  let pupilNameMap = {}; // lowercased full name -> "Pupil N"
   let reidMaps = {
-    pseudoToReal: {},
-    realToPseudo: {}
+    pseudoToReal: {},    // "Pupil N" -> Real Name
+    realToPseudo: {}     // Real Name -> "Pupil N"
   };
+  let namesAreClean = false; // gate for anonymise
+
+  // Hardcoded common names (copied from Groups)
+  const hardcodedNames = [
+    // Boys
+    'Aaron','Adam','Alex','Alfie','Archie','Ben','Billy','Charlie','Connor','Daniel',
+    'David','Dylan','Edward','Eli','Ethan','Felix','Finley','Freddie','George','Harry',
+    'Harvey','Henry','Hugo','Isaac','Jack','Jacob','Jake','James','Jayden','Joe',
+    'Joel','John','Joseph','Joshua','Leo','Lewis','Liam','Logan','Luca','Luke',
+    'Mason','Matthew','Max','Michael','Nathan','Noah','Oliver','Oscar','Reuben',
+    'Riley','Robert','Ryan','Samuel','Sebastian','Sonny','Theo','Thomas','Toby',
+    'Tyler','William','Zachary',
+    // Girls
+    'Abigail','Alice','Amelia','Ava','Bella','Charlotte','Chloe','Daisy','Ella','Ellie',
+    'Emily','Emma','Erin','Evie','Faith','Florence','Freya','Grace','Hannah','Harper',
+    'Holly','Imogen','Isabel','Isabella','Isla','Ivy','Jessica','Katie','Lacey','Layla',
+    'Lily','Lola','Lucy','Matilda','Megan','Mia','Millie','Molly','Nancy','Olivia',
+    'Phoebe','Poppy','Rosie','Ruby','Scarlett','Sienna','Sophie','Summer','Willow',
+    'Zara',
+    // Unisex/common modern
+    'Alex','Bailey','Charlie','Drew','Elliot','Finley','Frankie','Harley','Jamie',
+    'Jayden','Jesse','Jordan','Morgan','Riley','Rowan','Taylor'
+  ];
 
   // ====== STEP HELPERS ======
   const steps = [
@@ -24,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function showStep(stepIndex) {
     steps.forEach((step, idx) => {
+      if (!step) return;
       step.style.display = idx === stepIndex ? "block" : "none";
     });
   }
@@ -31,14 +56,16 @@ document.addEventListener("DOMContentLoaded", () => {
   showStep(0); // start at Step 1
 
   // ====== STEP 1: CCR UPLOAD + NAME CHECK + ANONYMISATION ======
-  const ccrFileInput = document.getElementById("ccrFile");
-  const btnParseCCR = document.getElementById("btnParseCCR");
-  const ccrPreview = document.getElementById("ccrPreview");
-  const ccrPreviewTable = document.getElementById("ccrPreviewTable");
-  const btnToTemplate = document.getElementById("btnToTemplate");
+  const ccrFileInput     = document.getElementById("ccrFile");
+  const btnCheckNames    = document.getElementById("btnCheckNames");
+  const btnAnonymise     = document.getElementById("btnAnonymise");
+  const btnToTemplate    = document.getElementById("btnToTemplate");
+  const ccrPreview       = document.getElementById("ccrPreview");
+  const ccrPreviewTable  = document.getElementById("ccrPreviewTable");
   const nameCheckSummary = document.getElementById("nameCheckSummary");
 
-  btnParseCCR.addEventListener("click", () => {
+  // 1) Check for names = parse + preview + strong name scan
+  btnCheckNames.addEventListener("click", () => {
     const file = ccrFileInput.files[0];
     if (!file) {
       alert("Please choose a CSV file first.");
@@ -49,7 +76,6 @@ document.addEventListener("DOMContentLoaded", () => {
     reader.onload = (e) => {
       const text = e.target.result;
 
-      // Very simple CSV parsing; you can swap for PapaParse later.
       const rows = text
         .trim()
         .split(/\r?\n/)
@@ -63,7 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const headers = rows[0].map((h) => h.trim());
       const dataRows = rows.slice(1);
 
-      // Find a "Name" column if possible
       const nameIndex = headers.findIndex((h) => {
         const lower = h.toLowerCase();
         return (
@@ -85,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .filter((row) => row[nameIndex] && row[nameIndex].trim() !== "")
         .map((row, idx) => {
           const displayName = row[nameIndex].trim();
-          const pseudoId = `Anon-${String(idx + 1).padStart(2, "0")}`;
+          const pseudoId = `Pupil ${idx + 1}`;
 
           const rawRow = {};
           headers.forEach((h, i) => {
@@ -96,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
             id: pseudoId,
             name: displayName, // local only
             rawRow,
-            anonymisedRow: null, // will be filled after anonymisation
+            anonymisedRow: null,
           };
         });
 
@@ -105,16 +130,17 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Save header + name column index for later anonymisation
-      csvHeaders = headers;
+      csvHeaders   = headers;
       csvNameIndex = nameIndex;
 
-      // Build reidentification maps
-      buildReidentificationMaps();
+      // Reset maps and gating
+      pupilNameMap = {};
+      reidMaps     = { pseudoToReal: {}, realToPseudo: {} };
+      namesAreClean = false;
+      btnAnonymise.disabled  = true;
+      btnToTemplate.disabled = true;
 
-      // Render preview and run name check
       renderPreviewAndNameCheck(headers, dataRows, nameIndex);
-
       ccrPreview.style.display = "block";
     };
 
@@ -122,57 +148,46 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /**
-   * Build the maps used for reidentification (pseudo <-> real name)
-   */
-  function buildReidentificationMaps() {
-    reidMaps.pseudoToReal = {};
-    reidMaps.realToPseudo = {};
-
-    ccrData.forEach((pupil) => {
-      if (!pupil.id || !pupil.name) return;
-      reidMaps.pseudoToReal[pupil.id] = pupil.name;
-      reidMaps.realToPseudo[pupil.name] = pupil.id;
-    });
-  }
-
-  /**
-   * Build a preview table showing:
-   * - Pseudonym (first column)
-   * - All CCR columns
-   * Also runs a simple name scan: it looks for any pupil names from the Name column
-   * appearing in any *other* column. If found, we block progress.
+   * Preview + strong name scan
    */
   function renderPreviewAndNameCheck(headers, dataRows, nameIndex) {
-    // Clear old content
     ccrPreviewTable.innerHTML = "";
     nameCheckSummary.textContent = "";
+    namesAreClean = false;
+    btnAnonymise.disabled  = true;
     btnToTemplate.disabled = true;
 
-    // Collect the list of pupil names from the Name column
     const pupilNames = dataRows
       .map((row) => (row[nameIndex] || "").trim())
       .filter((x) => x !== "");
 
-    // Helper: does a cell contain any pupil name as a separate word?
     function cellContainsName(cellValue) {
       if (!cellValue) return null;
       const text = String(cellValue);
+
+      // 1) Exact pupil names
       for (const name of pupilNames) {
         if (!name) continue;
         const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const regex = new RegExp(`\\b${escaped}\\b`, "i");
         if (regex.test(text)) return name;
       }
+
+      // 2) Hardcoded common names
+      for (const name of hardcodedNames) {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`\\b${escaped}\\b`, "i");
+        if (regex.test(text)) return name;
+      }
+
       return null;
     }
 
-    // Build the table
     const table = document.createElement("table");
     table.style.width = "100%";
     table.style.borderCollapse = "collapse";
     table.style.fontSize = "0.9rem";
 
-    // Header row: Pseudonym + all headers
     const headerRow = document.createElement("tr");
 
     function addCell(tr, text, isHeader = false) {
@@ -181,9 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cell.style.padding = "4px";
       cell.style.borderBottom = "1px solid #ccc";
       cell.style.textAlign = "left";
-      if (isHeader) {
-        cell.style.fontWeight = "600";
-      }
+      if (isHeader) cell.style.fontWeight = "600";
       tr.appendChild(cell);
       return cell;
     }
@@ -192,14 +205,12 @@ document.addEventListener("DOMContentLoaded", () => {
     headers.forEach((h) => addCell(headerRow, h, true));
     table.appendChild(headerRow);
 
-    // Data rows
     const flaggedCells = [];
 
     dataRows.forEach((row, rowIdx) => {
       const tr = document.createElement("tr");
 
-      // Pseudonym from ccrData (same order)
-      const pseudoId = ccrData[rowIdx]?.id || `Anon-${String(rowIdx + 1).padStart(2, "0")}`;
+      const pseudoId = ccrData[rowIdx]?.id || `Pupil ${rowIdx + 1}`;
       const pseudoCell = addCell(tr, pseudoId, false);
       pseudoCell.style.fontWeight = "600";
 
@@ -207,7 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const cellValue = row[colIdx] || "";
         const td = addCell(tr, cellValue, false);
 
-        // Name check: only scan non-name columns
         if (colIdx !== nameIndex) {
           const matchedName = cellContainsName(cellValue);
           if (matchedName) {
@@ -217,9 +227,9 @@ document.addEventListener("DOMContentLoaded", () => {
               matchedName,
               value: cellValue,
             });
-            td.style.backgroundColor = "#fff3cd"; // light amber
+            td.style.backgroundColor = "#fff3cd";
             td.style.borderBottom = "1px solid #f0c36d";
-            td.title = `Contains pupil name: "${matchedName}"`;
+            td.title = `Contains name or name-like entry: "${matchedName}"`;
           }
         }
       });
@@ -229,82 +239,129 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ccrPreviewTable.appendChild(table);
 
-    // Name-check summary + button gating
     if (flaggedCells.length > 0) {
       const uniqueMatches = Array.from(
         new Set(flaggedCells.map((f) => `"${f.matchedName}"`))
       ).join(", ");
       nameCheckSummary.style.color = "#b94a48";
       nameCheckSummary.textContent =
-        `Name check: found ${flaggedCells.length} cell(s) containing pupil name(s) in other columns: ${uniqueMatches}. ` +
-        `Please fix your CCR (remove or replace these names) and re-upload before continuing.`;
+        `Name check: found ${flaggedCells.length} cell(s) containing pupil or common name(s) in other columns: ${uniqueMatches}. ` +
+        `Please fix your CCR and re-upload before anonymising.`;
+      namesAreClean = false;
+      btnAnonymise.disabled  = true;
       btnToTemplate.disabled = true;
     } else {
       nameCheckSummary.style.color = "#3c763d";
       nameCheckSummary.textContent =
-        "Name check: no pupil names were found in other columns. You can safely anonymise and continue.";
-      btnToTemplate.disabled = false;
+        "Name check: no pupil or common names were found in other columns. You can now anonymise the class record.";
+      namesAreClean = true;
+      btnAnonymise.disabled  = false;
+      btnToTemplate.disabled = true;
     }
   }
 
   /**
-   * Replace the Name column in each CCR row with the pseudonym, and store that
-   * as `anonymisedRow`. This is what we send to the backend.
+   * Anonymise CCR rows in memory, Groups-style
    */
   function anonymiseCcrData() {
     if (!csvHeaders.length || csvNameIndex === -1) return;
 
     const nameHeader = csvHeaders[csvNameIndex];
 
-    ccrData.forEach((pupil) => {
+    pupilNameMap = {};
+    reidMaps = { pseudoToReal: {}, realToPseudo: {} };
+
+    ccrData.forEach((pupil, index) => {
       const anonymisedRow = { ...pupil.rawRow };
 
-      // Replace the name column with the pseudonym
-      if (nameHeader in anonymisedRow) {
-        anonymisedRow[nameHeader] = pupil.id;
+      const originalName =
+        (pupil.rawRow[nameHeader] || pupil.name || "").trim();
+      const pseudonym = `Pupil ${index + 1}`;
+      const lowerName = originalName.toLowerCase();
+
+      if (originalName) {
+        pupilNameMap[lowerName] = pseudonym;
+        reidMaps.pseudoToReal[pseudonym] = originalName;
+        reidMaps.realToPseudo[originalName] = pseudonym;
       }
 
-      // OPTIONAL: scrub any obviously sensitive columns here by header
-      // e.g. delete anonymisedRow["UPN"]; delete anonymisedRow["DOB"]; etc.
+      if (nameHeader in anonymisedRow) {
+        anonymisedRow[nameHeader] = pseudonym;
+      }
+
+      csvHeaders.forEach((header) => {
+        if (header === nameHeader) return;
+        let cell = anonymisedRow[header];
+        if (!cell) return;
+
+        Object.entries(pupilNameMap).forEach(([realLower, pseudo]) => {
+          const escaped = realLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+          cell = cell.replace(regex, pseudo);
+        });
+
+        hardcodedNames.forEach((name) => {
+          const matchEntry = Object.entries(pupilNameMap).find(([real]) =>
+            real.includes(name.toLowerCase())
+          );
+          const pseudo = matchEntry ? matchEntry[1] : null;
+
+          if (pseudo) {
+            const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+            cell = cell.replace(regex, pseudo);
+          }
+        });
+
+        anonymisedRow[header] = cell;
+      });
 
       pupil.anonymisedRow = anonymisedRow;
+      pupil.id = pseudonym;
     });
   }
 
-  btnToTemplate.addEventListener("click", () => {
+  // 2) Anonymise button
+  btnAnonymise.addEventListener("click", () => {
     if (!ccrData.length) {
-      alert("Please upload and preview your class record first.");
+      alert("Please check the file for names first.");
+      return;
+    }
+    if (!namesAreClean) {
+      alert("Please resolve all name-check issues before anonymising.");
       return;
     }
 
-    // Final safeguard: don’t move on if we somehow re-disabled it
-    if (btnToTemplate.disabled) {
-      alert("Please resolve all name-check issues before continuing.");
-      return;
-    }
-
-    // Anonymise CCR rows in memory before any AI calls happen
     anonymiseCcrData();
+    nameCheckSummary.textContent =
+      "✅ Anonymisation complete. You can now choose report sections.";
+    btnAnonymise.disabled  = true;
+    btnToTemplate.disabled = false;
+  });
 
+  // 3) Next: go to template builder
+  btnToTemplate.addEventListener("click", () => {
+    if (!ccrData.length || !ccrData[0].anonymisedRow) {
+      alert("Please anonymise the class record first.");
+      return;
+    }
     showStep(1); // Step 2: template builder
   });
 
   // ====== STEP 2: TEMPLATE BUILDER ======
-  const sectionList = document.getElementById("sectionList");
+  const sectionList   = document.getElementById("sectionList");
   const btnAddSection = document.getElementById("btnAddSection");
   const btnSaveTemplate = document.getElementById("btnSaveTemplate");
-  const btnToTone = document.getElementById("btnToTone");
+  const btnToTone       = document.getElementById("btnToTone");
 
-  // Grab the initial section-row from the HTML as our template
-  const sectionTemplate = sectionList.querySelector(".section-row");
+  const sectionTemplate = sectionList?.querySelector(".section-row");
 
-  // Helper to renumber section headers (Section 1, Section 2, etc.)
   function renumberSectionHeaders() {
     const rows = sectionList.querySelectorAll(".section-row");
     rows.forEach((row, idx) => {
       row.dataset.sectionIndex = idx;
       const headerSpan = row.querySelector(".section-row-header span");
-      headerSpan.textContent = `Section ${idx + 1}`;
+      if (headerSpan) headerSpan.textContent = `Section ${idx + 1}`;
       const nextStepCheckbox = row.querySelector(".section-next-step");
       if (nextStepCheckbox) {
         nextStepCheckbox.id = `section-${idx}-next-step`;
@@ -331,12 +388,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const headerSpan = clone.querySelector(".section-row-header span");
     if (headerSpan) headerSpan.textContent = `Section ${idx + 1}`;
 
-    const nameInput = clone.querySelector(".section-name");
-    const wordInput = clone.querySelector(".section-word-count");
+    const nameInput        = clone.querySelector(".section-name");
+    const wordInput        = clone.querySelector(".section-word-count");
     const nextStepCheckbox = clone.querySelector(".section-next-step");
 
-    if (nameInput) nameInput.value = name || `Section ${idx + 1}`;
-    if (wordInput) wordInput.value = wordCount;
+    if (nameInput)        nameInput.value = name || `Section ${idx + 1}`;
+    if (wordInput)        wordInput.value = wordCount;
     if (nextStepCheckbox) nextStepCheckbox.checked = includeNextStep;
 
     wireSectionRowControls(clone);
@@ -344,50 +401,57 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function wireSectionRowControls(row) {
-    const btnUp = row.querySelector(".btn-move-up");
-    const btnDown = row.querySelector(".btn-move-down");
+    const btnUp     = row.querySelector(".btn-move-up");
+    const btnDown   = row.querySelector(".btn-move-down");
     const btnDelete = row.querySelector(".btn-delete-section");
 
-    btnUp.onclick = () => {
-      const prev = row.previousElementSibling;
-      if (prev && prev.classList.contains("section-row")) {
-        sectionList.insertBefore(row, prev);
-        renumberSectionHeaders();
-      }
-    };
+    if (btnUp) {
+      btnUp.onclick = () => {
+        const prev = row.previousElementSibling;
+        if (prev && prev.classList.contains("section-row")) {
+          sectionList.insertBefore(row, prev);
+          renumberSectionHeaders();
+        }
+      };
+    }
 
-    btnDown.onclick = () => {
-      const next = row.nextElementSibling;
-      if (next && next.classList.contains("section-row")) {
-        sectionList.insertBefore(next, row);
-        renumberSectionHeaders();
-      }
-    };
+    if (btnDown) {
+      btnDown.onclick = () => {
+        const next = row.nextElementSibling;
+        if (next && next.classList.contains("section-row")) {
+          sectionList.insertBefore(next, row);
+          renumberSectionHeaders();
+        }
+      };
+    }
 
-    btnDelete.onclick = () => {
-      const rows = sectionList.querySelectorAll(".section-row");
-      if (rows.length === 1) {
-        alert("You must have at least one section.");
-        return;
-      }
-      row.remove();
-      renumberSectionHeaders();
-    };
+    if (btnDelete) {
+      btnDelete.onclick = () => {
+        const rows = sectionList.querySelectorAll(".section-row");
+        if (rows.length === 1) {
+          alert("You must have at least one section.");
+          return;
+        }
+        row.remove();
+        renumberSectionHeaders();
+      };
+    }
   }
 
-  // Wire the initial section row
-  const initialRow = sectionList.querySelector(".section-row");
+  const initialRow = sectionList?.querySelector(".section-row");
   if (initialRow) {
     wireSectionRowControls(initialRow);
   }
 
-  btnAddSection.addEventListener("click", () => {
+  btnAddSection?.addEventListener("click", () => {
     const newRow = createSectionRow();
-    sectionList.appendChild(newRow);
-    renumberSectionHeaders();
+    if (newRow) {
+      sectionList.appendChild(newRow);
+      renumberSectionHeaders();
+    }
   });
 
-  btnSaveTemplate.addEventListener("click", () => {
+  btnSaveTemplate?.addEventListener("click", () => {
     const template = getCurrentTemplateConfig();
     localStorage.setItem("cbai_report_template", JSON.stringify(template));
     alert("Template saved on this device.");
@@ -397,8 +461,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const rows = sectionList.querySelectorAll(".section-row");
     const sections = [];
     rows.forEach((row) => {
-      const nameInput = row.querySelector(".section-name");
-      const wordInput = row.querySelector(".section-word-count");
+      const nameInput        = row.querySelector(".section-name");
+      const wordInput        = row.querySelector(".section-word-count");
       const nextStepCheckbox = row.querySelector(".section-next-step");
       sections.push({
         name: nameInput.value.trim() || "Section",
@@ -409,16 +473,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return sections;
   }
 
-  // Optionally load template from localStorage on start
   const savedTemplate = localStorage.getItem("cbai_report_template");
   if (savedTemplate) {
     try {
       const sections = JSON.parse(savedTemplate);
-      // Remove the initial row and rebuild
       sectionList.innerHTML = "";
-      sections.forEach((s, idx) => {
+      sections.forEach((s) => {
         const row = createSectionRow(s.name, s.wordTarget, s.includeNextStep);
-        sectionList.appendChild(row);
+        if (row) sectionList.appendChild(row);
       });
       renumberSectionHeaders();
     } catch (e) {
@@ -426,7 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  btnToTone.addEventListener("click", () => {
+  btnToTone?.addEventListener("click", () => {
     const sections = getCurrentTemplateConfig();
     if (!sections.length) {
       alert("Please add at least one section.");
@@ -437,7 +499,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ====== STEP 3: TONE & STYLE ======
   const btnToPupilSelect = document.getElementById("btnToPupilSelect");
-  const styleNotesInput = document.getElementById("styleNotes");
+  const styleNotesInput  = document.getElementById("styleNotes");
 
   function getSelectedTone() {
     const toneRadios = document.querySelectorAll("input[name='tone']");
@@ -448,17 +510,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return value;
   }
 
-  btnToPupilSelect.addEventListener("click", () => {
+  btnToPupilSelect?.addEventListener("click", () => {
     populatePupilSelect();
     showStep(3);
   });
 
   // ====== STEP 4: PUPIL SELECT & GENERATE ======
-  const pupilSelect = document.getElementById("pupilSelect");
+  const pupilSelect      = document.getElementById("pupilSelect");
   const btnGenerateReport = document.getElementById("btnGenerateReport");
-  const generationStatus = document.getElementById("generationStatus");
+  const generationStatus  = document.getElementById("generationStatus");
 
   function populatePupilSelect() {
+    if (!pupilSelect) return;
     pupilSelect.innerHTML = "";
     ccrData.forEach((pupil) => {
       const opt = document.createElement("option");
@@ -472,7 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  btnGenerateReport.addEventListener("click", () => {
+  btnGenerateReport?.addEventListener("click", () => {
     if (!ccrData.length) {
       alert("No pupils loaded.");
       return;
@@ -484,23 +547,21 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const template = getCurrentTemplateConfig();
-    const tone = getSelectedTone();
-    const styleNotes = styleNotesInput.value.trim();
+    const template   = getCurrentTemplateConfig();
+    const tone       = getSelectedTone();
+    const styleNotes = styleNotesInput?.value.trim() || "";
 
-    // IMPORTANT: send anonymisedRow if we have it; fall back to rawRow
     const pupilRowForBackend = pupil.anonymisedRow || pupil.rawRow;
 
     const payload = {
-      pupilId: pupil.id,             // pseudonym only
+      pupilId: pupil.id,             // "Pupil N"
       pupilData: pupilRowForBackend, // anonymised CCR row
       template,
       tone,
       styleNotes,
-      // pupilName: pupil.name,      // keep local only; not needed by backend
     };
 
-    generationStatus.style.display = "block";
+    if (generationStatus) generationStatus.style.display = "block";
 
     fetch("/.netlify/functions/suggestReports", {
       method: "POST",
@@ -524,7 +585,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("There was an error generating the report. Please try again.");
       })
       .finally(() => {
-        generationStatus.style.display = "none";
+        if (generationStatus) generationStatus.style.display = "none";
       });
   });
 
@@ -546,10 +607,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ====== STEP 5: OUTPUT & COPY ======
   const reportSectionsContainer = document.getElementById("reportSections");
-  const btnCopyAll = document.getElementById("btnCopyAll");
+  const btnCopyAll   = document.getElementById("btnCopyAll");
   const btnNextPupil = document.getElementById("btnNextPupil");
+  const btnRevealNames = document.getElementById("btnRevealNames");
 
   function renderReportOutput(pupil, template, sectionsData = {}) {
+    if (!reportSectionsContainer) return;
     reportSectionsContainer.innerHTML = "";
 
     template.forEach((sec) => {
@@ -563,6 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const commentArea = document.createElement("textarea");
       commentArea.className = "report-text";
+      // Show anonymised (Pupil N) by default
       commentArea.value = sectionsData[sec.name] || "";
       wrapper.appendChild(commentArea);
 
@@ -585,12 +649,40 @@ document.addEventListener("DOMContentLoaded", () => {
       reportSectionsContainer.appendChild(wrapper);
     });
 
+    if (btnRevealNames) {
+      btnRevealNames.disabled = false;
+      btnRevealNames.textContent = "Reveal pupil names (local only)";
+    }
+
     showStep(4);
   }
 
-  btnCopyAll.addEventListener("click", async () => {
-    const sections = reportSectionsContainer.querySelectorAll(".report-section");
-    if (!sections.length) {
+  // Manual reveal of real names (local only)
+  btnRevealNames?.addEventListener("click", () => {
+    const sections = reportSectionsContainer?.querySelectorAll(".report-section");
+    if (!sections || !sections.length) {
+      alert("No report content to update.");
+      return;
+    }
+
+    sections.forEach((sec) => {
+      const textArea = sec.querySelector(".report-text");
+      if (textArea) {
+        textArea.value = reidentify(textArea.value);
+      }
+      const nextArea = sec.querySelector(".report-next-step");
+      if (nextArea) {
+        nextArea.value = reidentify(nextArea.value);
+      }
+    });
+
+    btnRevealNames.disabled = true;
+    btnRevealNames.textContent = "Names revealed (local only)";
+  });
+
+  btnCopyAll?.addEventListener("click", async () => {
+    const sections = reportSectionsContainer?.querySelectorAll(".report-section");
+    if (!sections || !sections.length) {
       alert("No report content to copy.");
       return;
     }
@@ -598,7 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let combined = "";
     sections.forEach((sec) => {
       const title = sec.querySelector("h3").textContent;
-      const text = sec.querySelector(".report-text").value.trim();
+      const text  = sec.querySelector(".report-text").value.trim();
       const nextStep = sec.querySelector(".report-next-step")
         ? sec.querySelector(".report-next-step").value.trim()
         : "";
@@ -619,36 +711,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  btnNextPupil.addEventListener("click", () => {
+  btnNextPupil?.addEventListener("click", () => {
     if (!ccrData.length) return;
     currentPupilIndex = (currentPupilIndex + 1) % ccrData.length;
     const nextPupil = ccrData[currentPupilIndex];
-    pupilSelect.value = nextPupil.id;
-    showStep(3); // back to pupil selection / generate
+    if (pupilSelect) pupilSelect.value = nextPupil.id;
+    showStep(3);
   });
-  const btnRevealNames = document.getElementById("btnRevealNames");
-
-if (btnRevealNames) {
-  btnRevealNames.addEventListener("click", () => {
-    const sections = reportSectionsContainer.querySelectorAll(".report-section");
-    if (!sections.length) {
-      alert("No report content to update.");
-      return;
-    }
-
-    sections.forEach((sec) => {
-      const textArea = sec.querySelector(".report-text");
-      if (textArea) {
-        textArea.value = reidentify(textArea.value);
-      }
-      const nextArea = sec.querySelector(".report-next-step");
-      if (nextArea) {
-        nextArea.value = reidentify(nextArea.value);
-      }
-    });
-
-    btnRevealNames.disabled = true;
-    btnRevealNames.textContent = "Names revealed (local only)";
-  });
-}
 });
