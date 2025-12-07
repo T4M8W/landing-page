@@ -16,6 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   let namesAreClean = false; // gate for anonymise
 
+  // For Groups-style highlighting
+  let highlightedCells = {}; // { rowIndex: { header: true } }
+
   // Hardcoded common names (copied from Groups)
   const hardcodedNames = [
     // Boys
@@ -152,6 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pupilNameMap = {};
       reidMaps     = { pseudoToReal: {}, realToPseudo: {} };
       namesAreClean = false;
+      highlightedCells = {};
 
       if (btnCheckNames) {
         btnCheckNames.disabled = false;
@@ -215,36 +219,123 @@ document.addEventListener("DOMContentLoaded", () => {
     ccrPreviewTable.appendChild(table);
   }
 
-  // 1) Check for names – run strong scan using existing csvHeaders + csvDataRows
+  // 1) Check for names – Groups-style
   btnCheckNames.addEventListener("click", () => {
     if (!csvHeaders.length || !csvDataRows.length) {
       alert("Please upload a class record first.");
       return;
     }
-    renderPreviewAndNameCheck(csvHeaders, csvDataRows, csvNameIndex);
+    renderPreviewAndNameCheck(csvHeaders, csvDataRows);
   });
 
   /**
-   * Preview + strong name scan (Groups-style, tuned to avoid false positives)
+   * Preview + strong name scan (Groups logic, adapted to this structure)
    */
-  function renderPreviewAndNameCheck(headers, dataRows, nameIndex) {
-    // Clear old content + reset gating
-    ccrPreviewTable.innerHTML = "";
-    nameCheckSummary.textContent = "";
-    namesAreClean = false;
-    btnAnonymise.disabled  = true;
-    btnToTemplate.disabled = true;
+  function renderPreviewAndNameCheck(headers, dataRows) {
+    // Build Groups-style row objects from the CSV arrays
+    const originalData = dataRows.map((row) => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        obj[h] = row[i] || "";
+      });
+      return obj;
+    });
 
-    // Collect the list of pupil names from the Name column
-    const pupilNames = dataRows
-      .map((row) => (row[nameIndex] || "").trim())
-      .filter((x) => x && x.length >= 3); // ignore tiny/incomplete names
+    // Reset UI + gates
+    ccrPreviewTable.innerHTML = "";
+    highlightedCells = {};
+    namesAreClean = false;
+    if (btnAnonymise)  btnAnonymise.disabled  = true;
+    if (btnToTemplate) btnToTemplate.disabled = true;
+
+    // Find the "Name" column exactly like Groups
+    const nameColumn = headers.find((h) => h.toLowerCase() === "name");
+    if (!nameColumn) {
+      alert("Couldn't find a 'Name' column.");
+      nameCheckSummary.style.color = "#b94a48";
+      nameCheckSummary.textContent =
+        "Name check could not run because no 'Name' column was found.";
+      return;
+    }
+
+    // Extract names from the Name column (no extra heuristics)
+    const extractedNames = originalData
+      .map((row) => row[nameColumn])
+      .filter(Boolean);
+
+    const foundNames = [];
+    highlightedCells = {};
+
+    // Exact Groups logic: full-name substring + hardcoded first-name regex
+    originalData.forEach((row, rowIndex) => {
+      headers.forEach((header) => {
+        if (header.toLowerCase() === "name") return;
+        const cell = row[header];
+        if (!cell) return;
+
+        const cellLower = String(cell).toLowerCase();
+
+        // 1) Full names from Name column
+        extractedNames.forEach((name) => {
+          if (!name) return;
+          const nameLower = name.toLowerCase().trim();
+          if (nameLower && cellLower.includes(nameLower)) {
+            foundNames.push(`Row ${rowIndex + 1}, Column '${header}': "${name}"`);
+            if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
+            highlightedCells[rowIndex][header] = true;
+          }
+        });
+
+        // 2) Hardcoded first names
+        hardcodedNames.forEach((name) => {
+          const regex = new RegExp(`\\b${name}\\b`, "i");
+          if (regex.test(String(cell))) {
+            foundNames.push(`Row ${rowIndex + 1}, Column '${header}': "${name}"`);
+            if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
+            highlightedCells[rowIndex][header] = true;
+          }
+        });
+      });
+    });
+
+    // Re-render the table with highlights applied
+    renderCheckedPreview(headers, originalData);
+
+    // Display result summary (simpler than Groups UI but same semantics)
+    if (foundNames.length > 0) {
+      nameCheckSummary.style.color = "#b94a48";
+      nameCheckSummary.innerHTML = `
+        <p><strong>⚠️ The following names were found in notes or comments:</strong></p>
+        <ul style="list-style:none;padding:0;margin:0;">
+          ${foundNames.map((n) => `<li>${n}</li>`).join("")}
+        </ul>
+        <p>Please anonymise these entries in your spreadsheet and re-upload before continuing.</p>
+      `;
+      namesAreClean = false;
+      if (btnAnonymise)  btnAnonymise.disabled  = true;
+      if (btnToTemplate) btnToTemplate.disabled = true;
+    } else {
+      nameCheckSummary.style.color = "#3c763d";
+      nameCheckSummary.innerHTML = `
+        <p><strong>✅ No names found in notes or comments.</strong></p>
+        <p>You’re good to go. You can now anonymise the list.</p>
+      `;
+      namesAreClean = true;
+      if (btnAnonymise)  btnAnonymise.disabled  = false;
+      if (btnToTemplate) btnToTemplate.disabled = true;
+    }
+  }
+
+  // Re-render preview table using highlightedCells map
+  function renderCheckedPreview(headers, rowObjects) {
+    ccrPreviewTable.innerHTML = "";
 
     const table = document.createElement("table");
     table.style.width = "100%";
     table.style.borderCollapse = "collapse";
     table.style.fontSize = "0.9rem";
 
+    const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
 
     function addCell(tr, text, isHeader = false) {
@@ -260,85 +351,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     addCell(headerRow, "Pseudonym", true);
     headers.forEach((h) => addCell(headerRow, h, true));
-    table.appendChild(headerRow);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
-    const flaggedCells = [];
+    const tbody = document.createElement("tbody");
 
-    dataRows.forEach((row, rowIdx) => {
+    rowObjects.forEach((row, rowIndex) => {
       const tr = document.createElement("tr");
 
-      const pseudoId = ccrData[rowIdx]?.id || `Pupil ${rowIdx + 1}`;
+      const pseudoId = ccrData[rowIndex]?.id || `Pupil ${rowIndex + 1}`;
       const pseudoCell = addCell(tr, pseudoId, false);
       pseudoCell.style.fontWeight = "600";
 
-      headers.forEach((h, colIdx) => {
-        const cellValue = row[colIdx] || "";
-        const td = addCell(tr, cellValue, false);
+      headers.forEach((header) => {
+        const td = addCell(tr, row[header] || "", false);
 
-        if (colIdx === nameIndex) return;
-
-        const cellLower = String(cellValue).toLowerCase();
-
-        // 1) Full pupil name scan (Groups-style)
-        pupilNames.forEach((name) => {
-          const nameLower = name.toLowerCase().trim();
-          if (!nameLower || nameLower.length < 3) return;
-          if (cellLower.includes(nameLower)) {
-            flaggedCells.push({
-              rowIndex: rowIdx,
-              colIndex: colIdx,
-              matchedName: name,
-              value: cellValue,
-            });
-            td.style.backgroundColor = "#fff3cd";
-            td.style.fontWeight = "bold";
-          }
-        });
-
-        // 2) Hardcoded first names (with strict word boundaries)
-        hardcodedNames.forEach((name) => {
-          const regex = new RegExp(`\\b${name}\\b`, "i");
-          if (regex.test(cellValue)) {
-            flaggedCells.push({
-              rowIndex: rowIdx,
-              colIndex: colIdx,
-              matchedName: name,
-              value: cellValue,
-            });
-            td.style.backgroundColor = "#fff3cd";
-            td.style.fontWeight = "bold";
-          }
-        });
+        if (highlightedCells[rowIndex] && highlightedCells[rowIndex][header]) {
+          td.style.backgroundColor = "#fff3cd"; // pale yellow
+          td.style.fontWeight = "bold";
+        }
       });
 
-      table.appendChild(tr);
+      tbody.appendChild(tr);
     });
 
+    table.appendChild(tbody);
     ccrPreviewTable.appendChild(table);
-
-    if (flaggedCells.length > 0) {
-      const uniqueMatches = Array.from(
-        new Set(flaggedCells.map((f) => `"${f.matchedName}"`))
-      ).join(", ");
-
-      nameCheckSummary.style.color = "#b94a48";
-      nameCheckSummary.textContent =
-        `Name check: found ${flaggedCells.length} cell(s) containing pupil or common first names: ${uniqueMatches}. ` +
-        "Please anonymise or remove these entries in your spreadsheet and re-upload before continuing.";
-
-      btnAnonymise.disabled  = true;
-      btnToTemplate.disabled = true;
-      namesAreClean = false;
-
-    } else {
-      nameCheckSummary.style.color = "#3c763d";
-      nameCheckSummary.textContent =
-        "✅ No names found in notes or comments. You can now anonymise the class record.";
-
-      btnAnonymise.disabled  = false;
-      btnToTemplate.disabled = true;
-      namesAreClean = true;
-    }
   }
 
   /**
@@ -358,10 +396,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const originalName =
         (pupil.rawRow[nameHeader] || pupil.name || "").trim();
       const pseudonym = `Pupil ${index + 1}`;
-      const lowerName = originalName.toLowerCase();
 
       if (originalName) {
-        pupilNameMap[lowerName] = pseudonym;
+        pupilNameMap[originalName.toLowerCase()] = pseudonym;
         reidMaps.pseudoToReal[pseudonym] = originalName;
         reidMaps.realToPseudo[originalName] = pseudonym;
       }
@@ -414,8 +451,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     anonymiseCcrData();
-    nameCheckSummary.textContent =
-      "✅ Anonymisation complete. You can now choose report sections.";
+    nameCheckSummary.innerHTML =
+      "<p>✅ Anonymisation complete. You can now choose report sections.</p>";
     btnAnonymise.disabled  = true;
     btnToTemplate.disabled = false;
   });
