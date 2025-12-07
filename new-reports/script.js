@@ -93,10 +93,13 @@ document.addEventListener("DOMContentLoaded", () => {
     reader.onload = (e) => {
       const text = e.target.result;
 
-      const rows = text
-        .trim()
-        .split(/\r?\n/)
-        .map((r) => r.split(","));
+      const parsed = Papa.parse(text.trim(), {
+  header: false,
+  skipEmptyLines: true,
+});
+
+const rows = parsed.data;
+
 
       if (!rows.length) {
         alert("File appears to be empty.");
@@ -707,13 +710,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return sections;
   }
 
-  const savedTemplate = localStorage.getItem("cbai_report_template");
+    const savedTemplate = localStorage.getItem("cbai_report_template");
   if (savedTemplate) {
     try {
       const sections = JSON.parse(savedTemplate);
       sectionList.innerHTML = "";
       sections.forEach((s) => {
-        const row = createSectionRow(s.name, s.wordTarget, s.includeNextStep);
+        // Support both current key wordTarget and any older wordCount key
+        const wc =
+          Number(s.wordTarget ?? s.wordCount ?? 100) || 100;
+        const row = createSectionRow(s.name, wc, !!s.includeNextStep);
         if (row) sectionList.appendChild(row);
       });
       renumberSectionHeaders();
@@ -721,6 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.warn("Could not parse saved template", e);
     }
   }
+
 
   btnToTone?.addEventListener("click", () => {
     const sections = getCurrentTemplateConfig();
@@ -849,6 +856,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnNextPupil = document.getElementById("btnNextPupil");
   const btnRevealNames = document.getElementById("btnRevealNames");
 
+    function countWords(text) {
+    if (!text) return 0;
+    const trimmed = text.trim();
+    if (!trimmed) return 0;
+    return trimmed.split(/\s+/).length;
+  }
+
+  function attachWordCounter(textarea, target) {
+    if (!textarea) return;
+
+    const counter = document.createElement("div");
+    counter.className = "word-counter";
+    counter.style.fontSize = "0.8rem";
+    counter.style.marginTop = "4px";
+    counter.style.color = "#555";
+
+    const update = () => {
+      const words = countWords(textarea.value);
+      counter.textContent = `${words} / ${target} words`;
+    };
+
+    textarea.addEventListener("input", update);
+    // initialise on first render
+    update();
+
+    textarea.parentNode.insertBefore(counter, textarea.nextSibling);
+  }
+
   function renderReportOutput(pupil, template, sectionsData = {}) {
     if (!reportSectionsContainer) return;
     reportSectionsContainer.innerHTML = "";
@@ -862,11 +897,16 @@ document.addEventListener("DOMContentLoaded", () => {
       h.textContent = sec.name;
       wrapper.appendChild(h);
 
-      const commentArea = document.createElement("textarea");
+            const commentArea = document.createElement("textarea");
       commentArea.className = "report-text";
       // Show anonymised (Pupil N) by default
       commentArea.value = sectionsData[sec.name] || "";
       wrapper.appendChild(commentArea);
+
+      // NEW: live word counter using template target
+      const targetWords = sec.wordTarget || 100;
+      attachWordCounter(commentArea, targetWords);
+
 
       if (sec.includeNextStep) {
         const fg = document.createElement("div");
@@ -883,6 +923,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
         wrapper.appendChild(fg);
       }
+
+            // NEW: copy-this-section button
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "btn-copy-section";
+      copyBtn.textContent = "Copy this section";
+
+      copyBtn.addEventListener("click", async () => {
+        const title = h.textContent;
+        const mainText = commentArea.value.trim();
+        const nextStepArea = wrapper.querySelector(".report-next-step");
+        const nextText = nextStepArea ? nextStepArea.value.trim() : "";
+
+        let combined = `${title}\n${mainText}`;
+        if (nextText) {
+          combined += `\nNext step: ${nextText}`;
+        }
+
+        try {
+          await navigator.clipboard.writeText(combined.trim());
+          alert(`Section "${title}" copied to clipboard.`);
+        } catch (err) {
+          console.error(err);
+          alert("Unable to copy this section automatically. Please copy manually.");
+        }
+      });
+
+      wrapper.appendChild(copyBtn);
 
       reportSectionsContainer.appendChild(wrapper);
     });
@@ -949,11 +1017,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  btnNextPupil?.addEventListener("click", () => {
-    if (!ccrData.length) return;
-    currentPupilIndex = (currentPupilIndex + 1) % ccrData.length;
-    const nextPupil = ccrData[currentPupilIndex];
-    if (pupilSelect) pupilSelect.value = nextPupil.id;
-    showStep(3);
+      btnNextPupil?.addEventListener("click", () => {
+      if (!ccrData.length) return;
+  
+      // Move index on
+      currentPupilIndex = (currentPupilIndex + 1) % ccrData.length;
+      const nextPupil = ccrData[currentPupilIndex];
+  
+      // Update the select to the new pupil
+      if (pupilSelect) {
+        pupilSelect.value = nextPupil.id;
+      }
+  
+      // Automatically generate the next report
+      btnGenerateReport?.click();
+    });
   });
-});
