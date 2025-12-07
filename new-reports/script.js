@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /**
-   * Preview + strong name scan (Groups-style)
+   * Preview + strong name scan (Groups-style, tuned to avoid false positives)
    */
   function renderPreviewAndNameCheck(headers, dataRows, nameIndex) {
     // Clear old content + reset gating
@@ -238,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Collect the list of pupil names from the Name column
     const pupilNames = dataRows
       .map((row) => (row[nameIndex] || "").trim())
-      .filter(Boolean);
+      .filter((x) => x && x.length >= 3); // ignore tiny/incomplete names
 
     const table = document.createElement("table");
     table.style.width = "100%";
@@ -279,10 +279,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const cellLower = String(cellValue).toLowerCase();
 
-        // 1) Check for full pupil names (Groups-style: simple includes)
+        // 1) Full pupil name scan (Groups-style)
         pupilNames.forEach((name) => {
           const nameLower = name.toLowerCase().trim();
-          if (!nameLower) return;
+          if (!nameLower || nameLower.length < 3) return;
           if (cellLower.includes(nameLower)) {
             flaggedCells.push({
               rowIndex: rowIdx,
@@ -290,15 +290,15 @@ document.addEventListener("DOMContentLoaded", () => {
               matchedName: name,
               value: cellValue,
             });
-            td.style.backgroundColor = "#fff3cd"; // pale yellow
+            td.style.backgroundColor = "#fff3cd";
             td.style.fontWeight = "bold";
           }
         });
 
-        // 2) Check for common first names (hardcoded list, word-boundary regex)
+        // 2) Hardcoded first names (with strict word boundaries)
         hardcodedNames.forEach((name) => {
           const regex = new RegExp(`\\b${name}\\b`, "i");
-          if (regex.test(String(cellValue))) {
+          if (regex.test(cellValue)) {
             flaggedCells.push({
               rowIndex: rowIdx,
               colIndex: colIdx,
@@ -316,7 +316,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ccrPreviewTable.appendChild(table);
 
-    // Summary + gating, matching Groups semantics
     if (flaggedCells.length > 0) {
       const uniqueMatches = Array.from(
         new Set(flaggedCells.map((f) => `"${f.matchedName}"`))
@@ -324,19 +323,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       nameCheckSummary.style.color = "#b94a48";
       nameCheckSummary.textContent =
-        `Name check: found ${flaggedCells.length} cell(s) containing pupil or common name(s) in other columns: ${uniqueMatches}. ` +
+        `Name check: found ${flaggedCells.length} cell(s) containing pupil or common first names: ${uniqueMatches}. ` +
         "Please anonymise or remove these entries in your spreadsheet and re-upload before continuing.";
 
-      namesAreClean = false;
       btnAnonymise.disabled  = true;
       btnToTemplate.disabled = true;
+      namesAreClean = false;
+
     } else {
       nameCheckSummary.style.color = "#3c763d";
       nameCheckSummary.textContent =
-        "✅ No names found in notes or comments. You’re good to go – you can now anonymise the list.";
-      namesAreClean = true;
+        "✅ No names found in notes or comments. You can now anonymise the class record.";
+
       btnAnonymise.disabled  = false;
       btnToTemplate.disabled = true;
+      namesAreClean = true;
     }
   }
 
