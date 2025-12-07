@@ -241,6 +241,51 @@ document.addEventListener("DOMContentLoaded", () => {
       return obj;
     });
 
+    function renderAnonymisedPreview() {
+  ccrPreviewTable.innerHTML = "";
+
+  const table = document.createElement("table");
+  table.style.width = "100%";
+  table.style.borderCollapse = "collapse";
+  table.style.fontSize = "0.9rem";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+
+  function addCell(tr, text, isHeader = false) {
+    const cell = document.createElement(isHeader ? "th" : "td");
+    cell.textContent = text;
+    cell.style.padding = "4px";
+    cell.style.borderBottom = "1px solid #ccc";
+    cell.style.textAlign = "left";
+    if (isHeader) cell.style.fontWeight = "600";
+    tr.appendChild(cell);
+    return cell;
+  }
+
+  addCell(headerRow, "Pseudonym", true);
+  csvHeaders.forEach((h) => addCell(headerRow, h, true));
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  ccrData.forEach((pupil, idx) => {
+    const tr = document.createElement("tr");
+    addCell(tr, pupil.id, false).style.fontWeight = "600";
+
+    csvHeaders.forEach((header) => {
+      const value = pupil.anonymisedRow?.[header] || "";
+      addCell(tr, value, false);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  ccrPreviewTable.appendChild(table);
+}
+
     // Reset UI + gates
     ccrPreviewTable.innerHTML = "";
     highlightedCells = {};
@@ -394,6 +439,57 @@ document.addEventListener("DOMContentLoaded", () => {
     ccrPreviewTable.appendChild(table);
   }
 
+    // Render preview using anonymised rows (after anonymiseCcrData has run)
+  function renderAnonymisedPreview() {
+    ccrPreviewTable.innerHTML = "";
+
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+    table.style.fontSize = "0.9rem";
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+
+    function addCell(tr, text, isHeader = false) {
+      const cell = document.createElement(isHeader ? "th" : "td");
+      cell.textContent = text;
+      cell.style.padding = "4px";
+      cell.style.borderBottom = "1px solid #ccc";
+      cell.style.textAlign = "left";
+      if (isHeader) cell.style.fontWeight = "600";
+      tr.appendChild(cell);
+      return cell;
+    }
+
+    // Pseudonym column + CSV headers
+    addCell(headerRow, "Pseudonym", true);
+    csvHeaders.forEach((h) => addCell(headerRow, h, true));
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    ccrData.forEach((pupil) => {
+      const tr = document.createElement("tr");
+
+      // Pupil id, e.g. "Pupil 1"
+      addCell(tr, pupil.id, false).style.fontWeight = "600";
+
+      // Show anonymised cells for each header
+      csvHeaders.forEach((header) => {
+        const value = pupil.anonymisedRow?.[header] || "";
+        addCell(tr, value, false);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    ccrPreviewTable.appendChild(table);
+  }
+
+
   /**
    * Anonymise CCR rows in memory, Groups-style
    */
@@ -456,21 +552,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 2) Anonymise button
   btnAnonymise.addEventListener("click", () => {
-    if (!ccrData.length) {
-      alert("Please upload and check the file for names first.");
-      return;
-    }
-    if (!namesAreClean) {
-      alert("Please resolve all name-check issues before anonymising.");
-      return;
-    }
+  if (!ccrData.length) {
+    alert("Please upload and check the file for names first.");
+    return;
+  }
+  if (!namesAreClean) {
+    alert("Please resolve all name-check issues before anonymising.");
+    return;
+  }
 
-    anonymiseCcrData();
-    nameCheckSummary.innerHTML =
-      "<p>✅ Anonymisation complete. You can now choose report sections.</p>";
-    btnAnonymise.disabled  = true;
-    btnToTemplate.disabled = false;
-  });
+  anonymiseCcrData();
+
+  // NEW: show anonymised values in the preview table
+  renderAnonymisedPreview();
+
+  nameCheckSummary.innerHTML =
+    "<p>✅ Anonymisation complete. All names are now hidden. You can now choose report sections.</p>";
+  btnAnonymise.disabled  = true;
+  btnToTemplate.disabled = false;
+});
+
 
   // 3) Next: go to template builder
   btnToTemplate.addEventListener("click", () => {
@@ -724,19 +825,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ====== REIDENTIFICATION UTIL ======
   function reidentify(text) {
-    if (!text) return text;
-    let out = text;
+  if (!text) return text;
+  let out = text;
 
-    Object.keys(reidMaps.pseudoToReal).forEach((pseudo) => {
-      const realName = reidMaps.pseudoToReal[pseudo];
-      if (!realName) return;
-      const safePseudo = pseudo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`\\b${safePseudo}\\b`, "g");
-      out = out.replace(regex, realName);
-    });
+  Object.keys(reidMaps.pseudoToReal).forEach((pseudo) => {
+    const realName = reidMaps.pseudoToReal[pseudo];
+    if (!realName) return;
 
-    return out;
-  }
+    // Use FIRST NAME only, not full name
+    const firstName = realName.trim().split(/\s+/)[0];
+
+    const safePseudo = pseudo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`\\b${safePseudo}\\b`, "g");
+    out = out.replace(regex, firstName);
+  });
+
+  return out;
+}
 
   // ====== STEP 5: OUTPUT & COPY ======
   const reportSectionsContainer = document.getElementById("reportSections");
