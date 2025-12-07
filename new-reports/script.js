@@ -259,9 +259,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Extract names from the Name column (no extra heuristics)
-    const extractedNames = originalData
-      .map((row) => row[nameColumn])
-      .filter(Boolean);
+      // Extract names from the Name column.
+  // Filter out obvious non-name codes like PLP / RWI group / HAST test labels.
+  const extractedNames = originalData
+    .map((row) => row[nameColumn])
+    .filter(Boolean)
+    .filter((value) => {
+      const lower = String(value).toLowerCase();
+
+      // Anything that looks like a programme / code, not a pupil name
+      const blockedKeywords = ["group", "test", "spelling", "inc", "plp", "hast"];
+      if (blockedKeywords.some((kw) => lower.includes(kw))) return false;
+
+      // Very short / very long strings aren’t realistic pupil names
+      if (lower.length < 2 || lower.length > 60) return false;
+
+      return true;
+    });
+
 
     const foundNames = [];
     highlightedCells = {};
