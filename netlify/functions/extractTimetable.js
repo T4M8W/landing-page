@@ -29,7 +29,6 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Keep the instructions tight so the model can answer quickly
     const systemPrompt = `
 You turn messy teacher timetables into a clean list of lessons.
 
@@ -58,51 +57,22 @@ Here is the raw timetable text copied from a teacher document:
 Extract it into the JSON format described above.
     `.trim();
 
-    // Keep max_tokens modest to stay well inside Netlify's time limit
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // ~8s cap
-
-    let openaiResponse;
-    try {
-      openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          temperature: 0.0,
-          max_tokens: 600
-        }),
-        signal: controller.signal
-      });
-    } catch (err) {
-      clearTimeout(timeoutId);
-
-      // If we hit our own timeout, return a clear error instead of letting Netlify 504 it
-      if (err.name === "AbortError") {
-        console.error("OpenAI request timed out in extractTimetable");
-        return {
-          statusCode: 504,
-          body: JSON.stringify({
-            error: "Timed out while talking to the AI timetable helper."
-          })
-        };
-      }
-
-      console.error("Network error calling OpenAI (extractTimetable):", err);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Network error contacting OpenAI." })
-      };
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.0,
+        max_tokens: 600
+      })
+    });
 
     if (!openaiResponse.ok) {
       const text = await openaiResponse.text();
@@ -130,9 +100,8 @@ Extract it into the JSON format described above.
       };
     }
 
-    let sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+    const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
 
-    // Light validation / normalisation
     const cleanSessions = sessions
       .map((s) => {
         if (!s) return null;
@@ -140,9 +109,7 @@ Extract it into the JSON format described above.
         const start = (s.start || s.Start || "").trim();
         const end   = (s.end   || s.End   || "").trim();
         const label = (s.label || s.Label || "").trim();
-
         if (!day || !start || !end || !label) return null;
-
         return { day, start, end, label };
       })
       .filter(Boolean);
