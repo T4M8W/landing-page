@@ -89,6 +89,9 @@ Extract it into the JSON format described above.
     const completion = await openaiResponse.json();
     let rawContent = completion.choices?.[0]?.message?.content;
 
+    console.error("RAW MODEL OUTPUT >>>", JSON.stringify(rawContent));
+
+
     // At this point rawContent may be:
     // - a plain JSON string
     // - a string with extra text / Markdown around the JSON
