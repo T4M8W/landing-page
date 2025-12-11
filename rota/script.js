@@ -87,6 +87,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const planStatus          = document.getElementById("planStatus");
   const planOutput          = document.getElementById("planOutput");
   const togglePlanButton    = document.getElementById("togglePlanNamesButton");
+  const timetableFileInput  = document.getElementById("timetableFileInput");
+  const timetableTextInput   = document.getElementById("timetableTextInput");
+  const extractFromTextButton = document.getElementById("extractFromTextButton");
 
   // Generate intervention plan (prototype)
   if (generatePlanButton) {
@@ -174,15 +177,119 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+    // Upload timetable spreadsheet
+  if (timetableFileInput) {
+    timetableFileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      parseTimetableFile(file);
+    });
+  }
+
   if (loadTimetableButton) {
     loadTimetableButton.addEventListener("click", () => {
       renderTimetableGrid(SAMPLE_TIMETABLE);
     });
   }
 
+
   if (!fileInput) {
     console.warn("[ChalkboardAI] csvFileInput not found in DOM.");
     return;
+  }
+
+    // AI-based timetable extraction from pasted text
+  if (extractFromTextButton && timetableTextInput) {
+    extractFromTextButton.addEventListener("click", async () => {
+      const rawText = timetableTextInput.value.trim();
+      const statusEl = document.getElementById("timetableAiStatus");
+
+      if (!rawText) {
+        if (statusEl) statusEl.textContent = "Paste your timetable text first.";
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = "Asking the AI to read your timetable…";
+
+      try {
+        const response = await fetch("/.netlify/functions/extractTimetable", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ timetable_text: rawText })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.sessions || !Array.isArray(data.sessions) || !data.sessions.length) {
+          if (statusEl) {
+            statusEl.textContent =
+              "I couldn't extract any sessions from that text. " +
+              "You might need to tidy it up or try the CSV upload instead.";
+          }
+          return;
+        }
+
+        const sessions = data.sessions
+          .map((session, index) => {
+            const day   = normaliseDay(session.day || session.Day || "");
+            const start = (session.start || session.Start || "").trim();
+            const end   = (session.end   || session.End   || "").trim();
+            const label = (session.label || session.Label || "").trim();
+
+            if (!day || !start || !end || !label) return null;
+
+            const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
+
+            return {
+              id,
+              day,
+              start,
+              end,
+              label,
+              type: "lesson_general",
+              suitable_for_withdrawal: true,
+              teacher_status: "normal",
+              adult_capacity: 1
+            };
+          })
+          .filter(Boolean);
+
+        if (!sessions.length) {
+          if (statusEl) {
+            statusEl.textContent =
+              "The AI replied, but I couldn't turn it into a usable timetable. " +
+              "Try simplifying the pasted text or use the CSV upload.";
+          }
+          return;
+        }
+
+        // Clear any previous support tagging
+        for (const key in SESSION_SUPPORT) {
+          if (Object.prototype.hasOwnProperty.call(SESSION_SUPPORT, key)) {
+            delete SESSION_SUPPORT[key];
+          }
+        }
+
+        renderTimetableGrid(sessions);
+
+        if (statusEl) {
+          statusEl.textContent =
+            "Timetable extracted. Check it looks right, then click cells to tag support.";
+        }
+      } catch (err) {
+        console.error("Error calling extractTimetable function:", err);
+        const statusEl = document.getElementById("timetableAiStatus");
+        if (statusEl) {
+          statusEl.textContent =
+            "There was a problem talking to the AI timetable helper. " +
+            "Please try again or use the CSV upload.";
+        }
+      }
+    });
   }
 
   // STEP 1: User uploads class record and it renders, raw.
@@ -567,6 +674,19 @@ function resetState() {
   if (container) container.innerHTML = "";
 }
 
+function normaliseDay(value) {
+  const v = String(value).trim().toLowerCase();
+  if (!v) return null;
+
+  if (v.startsWith("mon")) return "Mon";
+  if (v.startsWith("tue")) return "Tue";
+  if (v.startsWith("wed")) return "Wed";
+  if (v.startsWith("thu")) return "Thu";
+  if (v.startsWith("fri")) return "Fri";
+
+  return null; // ignore weekends / anything else for now
+}
+
 // Basic HTML escaping for table cells
 function escapeHtml(str) {
   return String(str)
@@ -592,6 +712,8 @@ const SUPPORT_STATES = [
 
 // Stores support state per session id: { "mon_spell": 2, ... }
 const SESSION_SUPPORT = {};
+// The timetable currently in use (either uploaded or the built-in sample)
+let CURRENT_TIMETABLE = [];
 
 const SAMPLE_TIMETABLE = [
   // MONDAY
@@ -798,10 +920,87 @@ const SAMPLE_TIMETABLE = [
 // -----------------------------------------------------
 // TIMETABLE RENDERING – GRID VIEW WITH CLICKABLE CELLS
 // -----------------------------------------------------
+function parseTimetableFile(file) {
+  const statusEl = document.getElementById("timetableStatus");
+  if (statusEl) statusEl.textContent = "Reading timetable…";
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      if (!results.data || !results.data.length) {
+        if (statusEl) statusEl.textContent = "I couldn't find any timetable rows in that file.";
+        return;
+      }
+
+      const rawRows = results.data;
+      const sessions = [];
+
+      rawRows.forEach((row, index) => {
+        const dayRaw   = (row.Day   ?? row.day   ?? "").trim();
+        const startRaw = (row.Start ?? row.start ?? "").trim();
+        const endRaw   = (row.End   ?? row.end   ?? "").trim();
+        const labelRaw = (row.Label ?? row.label ?? "").trim();
+
+        const day   = normaliseDay(dayRaw);
+        const start = startRaw;
+        const end   = endRaw;
+        const label = labelRaw;
+
+        // Skip incomplete rows
+        if (!day || !start || !end || !label) return;
+
+        const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
+
+        sessions.push({
+          id,
+          day,
+          start,
+          end,
+          label,
+          // basic defaults for now; we can refine these later
+          type: "lesson_general",
+          suitable_for_withdrawal: true,
+          teacher_status: "normal",
+          adult_capacity: 1
+        });
+      });
+
+      if (!sessions.length) {
+        if (statusEl) {
+          statusEl.textContent =
+            "I couldn't recognise any timetable rows. " +
+            "Check that your headings are Day, Start, End and Label.";
+        }
+        return;
+      }
+
+      // Clear any previous support tagging
+      for (const key in SESSION_SUPPORT) {
+        if (Object.prototype.hasOwnProperty.call(SESSION_SUPPORT, key)) {
+          delete SESSION_SUPPORT[key];
+        }
+      }
+
+      renderTimetableGrid(sessions);
+
+      if (statusEl) {
+        statusEl.textContent = "Timetable loaded. Click a cell to tag support.";
+      }
+    },
+    error: (err) => {
+      console.error("Timetable parse error:", err);
+      if (statusEl) statusEl.textContent = "There was a problem reading that file. Please try again.";
+    }
+  });
+}
 
 function renderTimetableGrid(sessions) {
   const container = document.getElementById("timetable-grid");
   const statusEl  = document.getElementById("timetableStatus");
+
+  // Keep a reference to whatever timetable we're currently showing
+  CURRENT_TIMETABLE = Array.isArray(sessions) ? sessions : [];
 
   if (!container) {
     console.warn("[ChalkboardAI] timetable-grid not found in DOM.");
@@ -916,14 +1115,16 @@ function attachTimetableCellHandlers() {
 }
 
 function cycleSessionSupport(sessionId) {
-  // Current index in SUPPORT_STATES (default 0)
   const currentIndex = SESSION_SUPPORT[sessionId] ?? 0;
   const nextIndex = (currentIndex + 1) % SUPPORT_STATES.length;
 
   SESSION_SUPPORT[sessionId] = nextIndex;
 
   // Re-render the grid so the badge/emoji updates
-  renderTimetableGrid(SAMPLE_TIMETABLE);
+  const timetableToRender =
+    CURRENT_TIMETABLE && CURRENT_TIMETABLE.length ? CURRENT_TIMETABLE : SAMPLE_TIMETABLE;
+
+  renderTimetableGrid(timetableToRender);
 }
 
 // -----------------------------------------------------
@@ -935,20 +1136,23 @@ function buildRotaPayload() {
 
   if (!anonymisedRows || !anonymisedRows.length) {
     if (planStatus) {
-      planStatus.textContent = "Please upload your class record and anonymise it before generating a plan.";
+      planStatus.textContent =
+        "Please upload your class record and anonymise it before generating a plan.";
     }
     return null;
   }
 
-  if (!SAMPLE_TIMETABLE || !SAMPLE_TIMETABLE.length) {
+  const timetableSource =
+    CURRENT_TIMETABLE && CURRENT_TIMETABLE.length ? CURRENT_TIMETABLE : SAMPLE_TIMETABLE;
+
+  if (!timetableSource || !timetableSource.length) {
     if (planStatus) {
-      planStatus.textContent = "Timetable not available. Click 'Load sample timetable' first.";
+      planStatus.textContent = "Timetable not available. Upload a timetable or load the sample first.";
     }
     return null;
   }
 
-  // Build sessions with support info
-  const sessionsWithSupport = SAMPLE_TIMETABLE.map((session) => {
+  const sessionsWithSupport = timetableSource.map((session) => {
     const index = SESSION_SUPPORT[session.id] ?? 0;
     const state = SUPPORT_STATES[index] || SUPPORT_STATES[0];
 
@@ -968,8 +1172,8 @@ function buildRotaPayload() {
       version: "0.1-prototype",
       generated_at: new Date().toISOString()
     },
-    pupils: anonymisedRows,     // pseudonymised pupils
-    name_column: nameColumnKey, // for your reference
+    pupils: anonymisedRows,
+    name_column: nameColumnKey,
     timetable: sessionsWithSupport
   };
 

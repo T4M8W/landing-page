@@ -99,9 +99,38 @@ In this prototype, there’s a built-in sample timetable so you can see the work
 
 <section id="timetable-section">
   <h2>Timetable</h2>
-  <p>This prototype uses a built-in sample timetable.</p>
+  <p>You can upload your own timetable spreadsheet or use the built-in sample while you’re testing.</p>
 
+  <label for="timetableFileInput"><strong>Upload timetable spreadsheet</strong></label><br>
+  <input type="file" id="timetableFileInput" accept=".csv" />
+
+  <details style="margin-top: 0.5em;">
+    <summary>How to get your timetable into this tool</summary>
+    <p>1. Open your timetable in Excel, Google Sheets or similar.</p>
+    <p>2. Make sure it has one row per lesson, with columns called <em>Day</em>, <em>Start</em>, <em>End</em> and <em>Label</em>.</p>
+    <p>3. If your timetable is currently in a Word document, copy the table into a blank spreadsheet first, tidy up the headings, then save it as a simple text-table file.</p>
+    <p>4. Upload that saved file here. Each row should look something like: <code>Mon&nbsp;|&nbsp;09:00&nbsp;|&nbsp;09:20&nbsp;|&nbsp;Assembly</code>.</p>
+    <p>You can always fall back to the built-in sample timetable while you’re testing.</p>
+  </details>
+
+    <hr style="margin: 1.5em 0;">
+
+  <h3>Or let ChalkboardAI read your timetable for you</h3>
+  <p>Paste your timetable from Word, PDF, email or anywhere else, and I’ll ask the AI to turn it into a clean set of lessons.</p>
+
+  <label for="timetableTextInput"><strong>Paste timetable text</strong></label><br>
+  <textarea id="timetableTextInput" rows="8" style="width:100%; max-width:100%;"></textarea>
+
+  <div style="margin-top: 0.5em;">
+    <button id="extractFromTextButton">Use AI to read timetable</button>
+  </div>
+
+  <div id="timetableAiStatus" style="margin-top: 0.5em; font-size: 0.95rem;"></div>
+
+
+  <p style="margin-top: 1em;">Or, for a quick test:</p>
   <button id="loadTimetableButton">Load sample timetable</button>
+
   <div id="timetableStatus" style="margin-top: 0.5em;"></div>
 
   <div id="timetable-grid" style="margin-top: 1em;"></div>
@@ -110,13 +139,8 @@ In this prototype, there’s a built-in sample timetable so you can see the work
   <button id="generatePlanButton" disabled>Generate intervention plan (prototype)</button>
   <div id="planStatus" style="margin-top: 0.5em;"></div>
   <button id="togglePlanNamesButton" disabled>Show real pupil names</button>
-</div>
 
-<div id="planOutput" style="margin-top: 1em; white-space: pre-wrap;"></div>
-
-<div id="planOutput"></div>
-
-
+  <div id="planOutput" style="margin-top: 1em; white-space: pre-wrap;"></div>
 </section>
 
 </main>
