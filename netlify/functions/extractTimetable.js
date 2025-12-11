@@ -46,7 +46,7 @@ Rules:
 - Do not invent days or times that are not in the text.
 - If something is ambiguous, skip it rather than guessing.
 
-Your response should contain that JSON object. Put the JSON in a single object; do not split it across multiple code blocks.
+Your response MUST be a single JSON object and NOTHING ELSE (no prose, no Markdown).
     `.trim();
 
     const userPrompt = `
@@ -87,82 +87,31 @@ Extract it into the JSON format described above.
     }
 
     const completion = await openaiResponse.json();
-    let rawContent = completion.choices?.[0]?.message?.content;
+    const content = completion.choices?.[0]?.message?.content;
 
-    console.error("RAW MODEL OUTPUT >>>", JSON.stringify(rawContent));
-
-
-    // At this point rawContent may be:
-    // - a plain JSON string
-    // - a string with extra text / Markdown around the JSON
-    // We normalise it aggressively.
-
-    if (typeof rawContent !== "string") {
-      // Some SDKs could return an object; treat it as already-parsed JSON.
-      if (rawContent && typeof rawContent === "object") {
-        console.log("extractTimetable: content is already an object");
-      } else {
-        console.error("Unexpected content format from OpenAI (extractTimetable):", rawContent);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: "Unexpected format from AI response." })
-        };
-      }
+    // content is either:
+    // - a JSON string (most likely, as in your logs)
+    // - or already a JSON object
+    let jsonString;
+    if (typeof content === "string") {
+      jsonString = content;
+    } else if (content && typeof content === "object") {
+      jsonString = JSON.stringify(content);
+    } else {
+      console.error("Unexpected content format from OpenAI (extractTimetable):", content);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Unexpected format from AI response." })
+      };
     }
 
-    if (typeof rawContent === "string") {
-      let text = rawContent.trim();
-
-      // Strip Markdown fences if present
-      if (text.startsWith("```")) {
-        const firstNewline = text.indexOf("\n");
-        const lastFence = text.lastIndexOf("```");
-        if (firstNewline !== -1 && lastFence > firstNewline) {
-          text = text.slice(firstNewline + 1, lastFence).trim();
-        }
-      }
-
-      // If there's surrounding explanation text, isolate the first {...} block
-      const firstBrace = text.indexOf("{");
-      const lastBrace = text.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        text = text.slice(firstBrace, lastBrace + 1);
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(text);
-        rawContent = parsed; // from now on, treat as object
-      } catch (err) {
-        console.error("Failed to parse cleaned JSON string (extractTimetable):", text);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: "Model returned invalid JSON string." })
-        };
-      }
-    }
-
-    const parsed = typeof rawContent === "object" ? rawContent : {};
-    let sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
-
-    const cleanSessions = sessions
-      .map((s) => {
-        if (!s) return null;
-        const day   = (s.day   || s.Day   || "").trim();
-        const start = (s.start || s.Start || "").trim();
-        const end   = (s.end   || s.End   || "").trim();
-        const label = (s.label || s.Label || "").trim();
-        if (!day || !start || !end || !label) return null;
-        return { day, start, end, label };
-      })
-      .filter(Boolean);
-
-    console.log("extractTimetable: extracted", cleanSessions.length, "sessions");
+    // Optional: quick sanity log
+    console.error("extractTimetable: sending JSON to client");
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessions: cleanSessions })
+      body: jsonString
     };
   } catch (err) {
     console.error("Error in extractTimetable function:", err);
