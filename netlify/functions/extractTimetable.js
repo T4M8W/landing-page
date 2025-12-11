@@ -46,7 +46,7 @@ Rules:
 - Do not invent days or times that are not in the text.
 - If something is ambiguous, skip it rather than guessing.
 
-Your response MUST be valid JSON and NOTHING ELSE (no prose, no Markdown).
+Your response MUST be a JSON object and NOTHING ELSE (no prose, no Markdown).
     `.trim();
 
     const userPrompt = `
@@ -69,6 +69,8 @@ Extract it into the JSON format described above.
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
+        // Ask OpenAI to give us a JSON object
+        response_format: { type: "json_object" },
         temperature: 0.0,
         max_tokens: 600
       })
@@ -87,21 +89,35 @@ Extract it into the JSON format described above.
     }
 
     const completion = await openaiResponse.json();
-    const rawContent = completion.choices?.[0]?.message?.content || "{}";
+
+    // This may be either a string (JSON text) or an object (already parsed)
+    const content = completion.choices?.[0]?.message?.content;
 
     let parsed;
-    try {
-      parsed = JSON.parse(rawContent);
-    } catch (err) {
-      console.error("Failed to parse model JSON (extractTimetable):", rawContent);
+    if (typeof content === "string") {
+      try {
+        parsed = JSON.parse(content);
+      } catch (err) {
+        console.error("Failed to parse content string as JSON (extractTimetable):", content);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: "Model returned invalid JSON string." })
+        };
+      }
+    } else if (content && typeof content === "object") {
+      // With response_format: json_object, content is often already a JSON object
+      parsed = content;
+    } else {
+      console.error("Unexpected content format from OpenAI (extractTimetable):", content);
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "Model returned invalid JSON." })
+        body: JSON.stringify({ error: "Unexpected format from AI response." })
       };
     }
 
-    const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+    let sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
 
+    // Light validation / normalisation
     const cleanSessions = sessions
       .map((s) => {
         if (!s) return null;
@@ -113,6 +129,8 @@ Extract it into the JSON format described above.
         return { day, start, end, label };
       })
       .filter(Boolean);
+
+    console.log("extractTimetable: extracted", cleanSessions.length, "sessions");
 
     return {
       statusCode: 200,
