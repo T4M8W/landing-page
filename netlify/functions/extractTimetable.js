@@ -4,7 +4,8 @@ export async function handler(event, context) {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      body: "Method Not Allowed"
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method Not Allowed" })
     };
   }
 
@@ -15,6 +16,7 @@ export async function handler(event, context) {
     if (!timetableText || typeof timetableText !== "string") {
       return {
         statusCode: 400,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ error: "Missing timetable_text" })
       };
     }
@@ -23,6 +25,7 @@ export async function handler(event, context) {
     if (!apiKey) {
       return {
         statusCode: 500,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ error: "Missing OPENAI_API_KEY" })
       };
     }
@@ -73,20 +76,31 @@ Please extract it into JSON as described.
       })
     });
 
+    const text = await openaiResponse.text();
+
     if (!openaiResponse.ok) {
-      const text = await openaiResponse.text();
-      console.error("OpenAI API error (extractTimetable):", text);
+      console.error("OpenAI API error (extractTimetable):", openaiResponse.status, text);
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Error from OpenAI API", detail: text })
+        statusCode: 502,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Error from OpenAI API",
+          status: openaiResponse.status,
+          detail: text
+        })
       };
     }
 
-    const completion = await openaiResponse.json();
-    const rawContent = completion.choices?.[0]?.message?.content || "{}";
+    // text should be JSON, but models sometimes wrap it in extra text
+    // Try to pull out the JSON block if needed.
+    let rawContent = text;
+    const firstBrace = rawContent.indexOf("{");
+    const lastBrace = rawContent.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      rawContent = rawContent.slice(firstBrace, lastBrace + 1);
+    }
 
-    // Debug log in Netlify console
-    console.log("RAW model content (extractTimetable):", rawContent.slice(0, 500));
+    console.log("RAW model content (extractTimetable) snippet:", rawContent.slice(0, 300));
 
     let parsed;
     try {
@@ -95,7 +109,11 @@ Please extract it into JSON as described.
       console.error("Failed to parse model JSON (extractTimetable):", rawContent);
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "Model returned invalid JSON." })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Model returned invalid JSON",
+          raw: rawContent
+        })
       };
     }
 
@@ -121,6 +139,7 @@ Please extract it into JSON as described.
     console.error("Error in extractTimetable function:", err);
     return {
       statusCode: 500,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: "Server error", detail: err.message })
     };
   }

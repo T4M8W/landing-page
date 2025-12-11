@@ -212,17 +212,24 @@ document.addEventListener("DOMContentLoaded", () => {
       if (statusEl) statusEl.textContent = "Asking the AI to read your timetable…";
 
       try {
-        const response = await fetch("/.netlify/functions/extractTimetable", {
+                const response = await fetch("/.netlify/functions/extractTimetable", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ timetable_text: rawText })
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        const data = await response.json().catch(() => ({}));
 
-        const data = await response.json();
+        if (!response.ok) {
+          console.error("extractTimetable backend error:", data);
+          if (statusEl) {
+            statusEl.textContent =
+              data && data.error
+                ? `AI timetable helper error: ${data.error}`
+                : "The AI timetable helper hit an error. Please try again or use the CSV upload.";
+          }
+          return;
+        }
 
         if (!data.sessions || !Array.isArray(data.sessions) || !data.sessions.length) {
           if (statusEl) {
