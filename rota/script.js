@@ -200,104 +200,112 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // AI-based timetable extraction from pasted text
   if (extractFromTextButton && timetableTextInput) {
-    extractFromTextButton.addEventListener("click", async () => {
-      const rawText = timetableTextInput.value.trim();
-      const statusEl = document.getElementById("timetableAiStatus");
+  extractFromTextButton.addEventListener("click", async () => {
+    const rawText = timetableTextInput.value.trim();
+    const statusEl = document.getElementById("timetableAiStatus");
 
-      if (!rawText) {
-        if (statusEl) statusEl.textContent = "Paste your timetable text first.";
+    if (!rawText) {
+      if (statusEl) statusEl.textContent = "Paste your timetable text first.";
+      return;
+    }
+
+    if (statusEl) statusEl.textContent = "Asking the AI to read your timetable…";
+
+    try {
+      const response = await fetch("/.netlify/functions/extractTimetable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timetable_text: rawText })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      console.log("AI timetable raw data:", data);
+
+      if (!response.ok) {
+        console.error("extractTimetable backend error:", data);
+        if (statusEl) {
+          statusEl.textContent =
+            data && data.error
+              ? `AI timetable helper error: ${data.error}`
+              : "The AI timetable helper hit an error. Please try again or use the CSV upload.";
+        }
         return;
       }
 
-      if (statusEl) statusEl.textContent = "Asking the AI to read your timetable…";
+      // 🔑 Be flexible about where the sessions array lives
+      const rawSessions =
+        Array.isArray(data.sessions)          ? data.sessions :
+        Array.isArray(data)                   ? data :
+        Array.isArray(data.result?.sessions)  ? data.result.sessions :
+        [];
 
-      try {
-                const response = await fetch("/.netlify/functions/extractTimetable", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ timetable_text: rawText })
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          console.error("extractTimetable backend error:", data);
-          if (statusEl) {
-            statusEl.textContent =
-              data && data.error
-                ? `AI timetable helper error: ${data.error}`
-                : "The AI timetable helper hit an error. Please try again or use the CSV upload.";
-          }
-          return;
-        }
-
-        if (!data.sessions || !Array.isArray(data.sessions) || !data.sessions.length) {
-          if (statusEl) {
-            statusEl.textContent =
-              "I couldn't extract any sessions from that text. " +
-              "You might need to tidy it up or try the CSV upload instead.";
-          }
-          return;
-        }
-
-        const sessions = data.sessions
-          .map((session, index) => {
-            const day   = normaliseDay(session.day || session.Day || "");
-            const start = (session.start || session.Start || "").trim();
-            const end   = (session.end   || session.End   || "").trim();
-            const label = (session.label || session.Label || "").trim();
-
-            if (!day || !start || !end || !label) return null;
-
-            const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
-
-            return {
-              id,
-              day,
-              start,
-              end,
-              label,
-              type: "lesson_general",
-              suitable_for_withdrawal: true,
-              teacher_status: "normal",
-              adult_capacity: 1
-            };
-          })
-          .filter(Boolean);
-
-        if (!sessions.length) {
-          if (statusEl) {
-            statusEl.textContent =
-              "The AI replied, but I couldn't turn it into a usable timetable. " +
-              "Try simplifying the pasted text or use the CSV upload.";
-          }
-          return;
-        }
-
-        // Clear any previous support tagging
-        for (const key in SESSION_SUPPORT) {
-          if (Object.prototype.hasOwnProperty.call(SESSION_SUPPORT, key)) {
-            delete SESSION_SUPPORT[key];
-          }
-        }
-
-        renderTimetableGrid(sessions);
-
+      if (!rawSessions.length) {
         if (statusEl) {
           statusEl.textContent =
-            "Timetable extracted. Check it looks right, then click cells to tag support.";
+            "I couldn't extract any sessions from that text. " +
+            "You might need to tidy it up or try the CSV upload instead.";
         }
-      } catch (err) {
-        console.error("Error calling extractTimetable function:", err);
-        const statusEl = document.getElementById("timetableAiStatus");
+        return;
+      }
+
+      const sessions = rawSessions
+        .map((session, index) => {
+          const day   = normaliseDay(session.day || session.Day || "");
+          const start = (session.start || session.Start || "").trim();
+          const end   = (session.end   || session.End   || "").trim();
+          const label = (session.label || session.Label || "").trim();
+
+          if (!day || !start || !end || !label) return null;
+
+          const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
+
+          return {
+            id,
+            day,
+            start,
+            end,
+            label,
+            type: "lesson_general",
+            suitable_for_withdrawal: true,
+            teacher_status: "normal",
+            adult_capacity: 1
+          };
+        })
+        .filter(Boolean);
+
+      if (!sessions.length) {
         if (statusEl) {
           statusEl.textContent =
-            "There was a problem talking to the AI timetable helper. " +
-            "Please try again or use the CSV upload.";
+            "The AI replied, but I couldn't turn it into a usable timetable. " +
+            "Try simplifying the pasted text or use the CSV upload.";
+        }
+        return;
+      }
+
+      // Clear any previous support tagging
+      for (const key in SESSION_SUPPORT) {
+        if (Object.prototype.hasOwnProperty.call(SESSION_SUPPORT, key)) {
+          delete SESSION_SUPPORT[key];
         }
       }
-    });
-  }
+
+      renderTimetableGrid(sessions);
+
+      if (statusEl) {
+        statusEl.textContent =
+          "Timetable extracted. Check it looks right, then click cells to tag support.";
+      }
+    } catch (err) {
+      console.error("Error calling extractTimetable function:", err);
+      const statusEl = document.getElementById("timetableAiStatus");
+      if (statusEl) {
+        statusEl.textContent =
+          "There was a problem talking to the AI timetable helper. " +
+          "Please try again or use the CSV upload.";
+      }
+    }
+  });
+}
 
   // STEP 1: User uploads class record and it renders, raw.
   fileInput.addEventListener("change", (event) => {
