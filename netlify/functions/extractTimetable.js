@@ -35,22 +35,31 @@ exports.handler = async (event, context) => {
     }
 
     const systemPrompt = `
-You are a careful assistant that extracts a school timetable from messy text.
+You are a careful assistant that extracts a school timetable from messy teacher text.
 
-Return a JSON object with a single key "sessions", whose value is an array of objects.
-Each object MUST have exactly these keys:
+Your job is to turn that text into a JSON object with a single key "sessions",
+whose value is an array of lesson objects. Each object MUST have exactly these keys:
 
 - "day": one of "Mon", "Tue", "Wed", "Thu", "Fri"
 - "start": 24-hour time "HH:MM" (e.g. "09:00")
 - "end": 24-hour time "HH:MM"
-- "label": short lesson label like "Assembly", "Spelling", "Writing"
+- "label": a short lesson label like "Assembly", "Spelling", "Writing"
 
-RULES:
-- Only include sessions that clearly belong to the main school day (roughly 08:00–16:00).
-- Ignore rows where you can't confidently identify day, start time, end time AND label.
-- Do NOT invent times or days that aren't in the text.
-- If a row is ambiguous, SKIP it instead of guessing.
-    `.trim();
+The source timetable may:
+- Use day names like "Mon", "Monday", "MON".
+- Use times like "8.40 – 9.00", "9-45 – 10.45", "13.15-15.00" etc.
+  Always normalise these to 24-hour "HH:MM" in your output.
+
+IMPORTANT BEHAVIOUR:
+- Return as many sessions as you reasonably can from the text.
+- It is better to make a sensible guess (e.g. interpreting "8.40" as "08:40")
+  than to discard everything as ambiguous.
+- Only skip a row if it is completely unparsable (no clear day or time at all).
+- If there is any timetable information at all, the "sessions" array MUST NOT be empty.
+
+You must return VALID JSON only, no commentary, no Markdown.
+`.trim();
+
 
     const userPrompt = `
 Here is the raw timetable text copied from a teacher document:
