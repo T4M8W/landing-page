@@ -73,7 +73,7 @@ Please extract it into the JSON format described above.
           { role: "user", content: userPrompt },
         ],
         temperature: 0,
-        max_tokens: 1500,
+        max_tokens: 800,
         // Ask OpenAI to return strict JSON
         response_format: { type: "json_object" },
       }),
