@@ -104,7 +104,9 @@ Please extract it into the JSON format described above.
     const completion = await openaiResponse.json();
 
     let content = completion?.choices?.[0]?.message?.content;
+    console.error("RAW model content (extractTimetable):", content);  // <-- add this
     let parsed;
+    
 
     // With response_format: json_object, content *should* already be JSON,
     // but we'll handle both a string and an object defensively.
