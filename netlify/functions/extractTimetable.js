@@ -74,7 +74,7 @@ Please extract it into the JSON format described above.
         ],
         temperature: 0,
         max_tokens: 1500,
-        // 🔑 Ask OpenAI to return STRICT JSON
+        // Ask OpenAI to return strict JSON
         response_format: { type: "json_object" },
       }),
     });
@@ -113,41 +113,20 @@ Please extract it into the JSON format described above.
       parsed = {};
     }
 
-    let sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+    // Just pass through whatever sessions the model returned;
+    // frontend will do any extra validation / filtering.
+    const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
 
-    const cleanSessions = sessions
-      .map((s) => {
-        if (!s) return null;
-
-        const day   = (s.day   || s.Day   || "").trim();
-        const start = (s.start || s.Start || "").trim();
-        const end   = (s.end   || s.End   || "").trim();
-        const label = (s.label || s.Label || "").trim();
-
-        if (!day || !start || !end || !label) return null;
-
-        return { day, start, end, label };
-      })
-      .filter(Boolean);
-
-    console.error("extractTimetable: extracted", cleanSessions.length, "sessions");
-
-    // ✅ IMPORTANT: always return 200 with { sessions: [...] }
-    // even if it's an empty array – do NOT throw a 500 for JSON issues.
-    // --- DEBUG LOGS TO SEE WHAT WE'RE REALLY RETURNING ---
-console.error("FINAL parsed JSON:", parsed);
-console.error("FINAL sessions length:", cleanSessions.length);
-console.error("FIRST FEW SESSIONS:", cleanSessions.slice(0, 3));
-// ------------------------------------------------------
+    console.error("extractTimetable: sessions from model:", sessions.length);
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessions: cleanSessions }),
+      body: JSON.stringify({ sessions }),
     };
   } catch (err) {
     console.error("Unexpected error in extractTimetable:", err);
-    // Also fail softly here: frontend will just see sessions: [] if we want
+    // Fail softly: frontend will just see an empty sessions array
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
