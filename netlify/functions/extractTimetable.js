@@ -50,16 +50,15 @@ The source timetable may:
 - Use times like "8.40 – 9.00", "9-45 – 10.45", "13.15-15.00" etc.
   Always normalise these to 24-hour "HH:MM" in your output.
 
-IMPORTANT BEHAVIOUR:
+IMPORTANT:
 - Return as many sessions as you reasonably can from the text.
 - It is better to make a sensible guess (e.g. interpreting "8.40" as "08:40")
   than to discard everything as ambiguous.
-- Only skip a row if it is completely unparsable (no clear day or time at all).
+- Only skip a row if it is completely unparsable.
 - If there is any timetable information at all, the "sessions" array MUST NOT be empty.
 
 You must return VALID JSON only, no commentary, no Markdown.
-`.trim();
-
+    `.trim();
 
     const userPrompt = `
 Here is the raw timetable text copied from a teacher document:
@@ -69,24 +68,26 @@ Here is the raw timetable text copied from a teacher document:
 Please extract it into the JSON format described above.
     `.trim();
 
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0,
-        max_tokens: 800,
-        // Ask OpenAI to return strict JSON
-        response_format: { type: "json_object" },
-      }),
-    });
+    const openaiResponse = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0,
+          max_tokens: 800, // your reduced limit
+          response_format: { type: "json_object" },
+        }),
+      }
+    );
 
     if (!openaiResponse.ok) {
       const text = await openaiResponse.text();
@@ -103,40 +104,33 @@ Please extract it into the JSON format described above.
 
     const completion = await openaiResponse.json();
 
-let content = completion?.choices?.[0]?.message?.content;
-console.error("RAW model content (extractTimetable):", content);
+    let content = completion?.choices?.[0]?.message?.content;
+    console.error("RAW model content (extractTimetable):", content);
 
-let parsed = {};
+    let parsed = {};
 
-// With response_format: json_object, content should be JSON,
-// but if it's truncated we slice between the first '{' and last '}'.
-if (typeof content === "string") {
-  let raw = content.trim();
+    if (typeof content === "string") {
+      try {
+        parsed = JSON.parse(content);
+      } catch (err) {
+        console.error("JSON.parse error in extractTimetable:", err);
+        // Fail soft: no crash, just return empty array
+        return {
+          statusCode: 200,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessions: [] }),
+        };
+      }
+    } else if (content && typeof content === "object") {
+      parsed = content;
+    }
 
-  // Grab the largest complete JSON chunk we can
-  const firstBrace = raw.indexOf("{");
-  const lastBrace = raw.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    raw = raw.slice(firstBrace, lastBrace + 1);
-  }
-
-  try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    console.error("Still couldn't parse JSON after slicing:", err);
-    parsed = {};
-  }
-} else if (content && typeof content === "object") {
-  parsed = content;
-} else {
-  console.error("Unexpected content format from OpenAI:", content);
-}
-
-    // Just pass through whatever sessions the model returned;
-    // frontend will do any extra validation / filtering.
     const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
 
-    console.error("extractTimetable: sessions from model:", sessions.length);
+    console.error(
+      "extractTimetable: sessions length from model:",
+      sessions.length
+    );
 
     return {
       statusCode: 200,
@@ -145,11 +139,10 @@ if (typeof content === "string") {
     };
   } catch (err) {
     console.error("Unexpected error in extractTimetable:", err);
-    // Fail softly: frontend will just see an empty sessions array
     return {
-      statusCode: 200,
+      statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessions: [] }),
+      body: JSON.stringify({ error: "Server error", detail: err.message }),
     };
   }
 };
