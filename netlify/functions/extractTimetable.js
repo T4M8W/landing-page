@@ -22,11 +22,23 @@ exports.handler = async (event, context) => {
       };
     }
 
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error("Missing OPENAI_API_KEY");
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Server is not configured correctly (no API key).",
+        }),
+      };
+    }
+
     const systemPrompt = `
 You are a careful assistant that extracts a school timetable from messy text.
 
-Return a JSON object with a single key "sessions", whose value is an array
-of objects. Each object MUST have exactly these keys:
+Return a JSON object with a single key "sessions", whose value is an array of objects.
+Each object MUST have exactly these keys:
 
 - "day": one of "Mon", "Tue", "Wed", "Thu", "Fri"
 - "start": 24-hour time "HH:MM" (e.g. "09:00")
@@ -34,42 +46,38 @@ of objects. Each object MUST have exactly these keys:
 - "label": short lesson label like "Assembly", "Spelling", "Writing"
 
 RULES:
-- Only include sessions that clearly belong to the main school day.
-- Ignore anything obviously outside of 08:00–16:00.
-- Ignore rows where you can't confidently identify the day, start time, end time and label.
+- Only include sessions that clearly belong to the main school day (roughly 08:00–16:00).
+- Ignore rows where you can't confidently identify day, start time, end time AND label.
 - Do NOT invent times or days that aren't in the text.
 - If a row is ambiguous, SKIP it instead of guessing.
-
-Your response MUST be valid JSON and NOTHING ELSE (no commentary, no Markdown).
     `.trim();
 
     const userPrompt = `
-Here is the raw timetable text (copied from a teacher's document):
+Here is the raw timetable text copied from a teacher document:
 
 """${timetableText}"""
 
-Please extract it into JSON as described.
+Please extract it into the JSON format described above.
     `.trim();
 
-    const openaiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.0,
-          max_tokens: 1500,
-        }),
-      }
-    );
+    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0,
+        max_tokens: 1500,
+        // 🔑 Ask OpenAI to return STRICT JSON
+        response_format: { type: "json_object" },
+      }),
+    });
 
     if (!openaiResponse.ok) {
       const text = await openaiResponse.text();
@@ -85,59 +93,35 @@ Please extract it into JSON as described.
     }
 
     const completion = await openaiResponse.json();
-    let rawContent = completion?.choices?.[0]?.message?.content || "";
 
-    // --- NEW: robust JSON extraction ------------------------------------
-    // 1) Strip ``` fences if they exist
-    rawContent = rawContent.trim();
-    if (rawContent.startsWith("```")) {
-      const firstBrace = rawContent.indexOf("{");
-      const lastBrace = rawContent.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        rawContent = rawContent.slice(firstBrace, lastBrace + 1);
-      }
-    }
-
-    // 2) If there's extra text before/after, grab the first JSON-looking block
-    if (!rawContent.trim().startsWith("{")) {
-      const firstBrace = rawContent.indexOf("{");
-      const lastBrace = rawContent.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        rawContent = rawContent.slice(firstBrace, lastBrace + 1);
-      }
-    }
-
+    let content = completion?.choices?.[0]?.message?.content;
     let parsed;
-    try {
-      parsed = JSON.parse(rawContent);
-    } catch (err) {
-      console.error(
-        "Failed to parse model JSON (extractTimetable):",
-        rawContent
-      );
-      return {
-        statusCode: 500,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          error: "Model returned invalid JSON.",
-        }),
-      };
-    }
 
-    if (!parsed || typeof parsed !== "object") {
+    // With response_format: json_object, content *should* already be JSON,
+    // but we'll handle both a string and an object defensively.
+    if (typeof content === "string") {
+      try {
+        parsed = JSON.parse(content);
+      } catch (err) {
+        console.error("Failed to JSON.parse content string:", content);
+        parsed = {};
+      }
+    } else if (content && typeof content === "object") {
+      parsed = content;
+    } else {
+      console.error("Unexpected content format from OpenAI:", content);
       parsed = {};
     }
 
     let sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
 
-    // Light validation / normalisation
     const cleanSessions = sessions
       .map((s) => {
         if (!s) return null;
 
-        const day = (s.day || s.Day || "").trim();
+        const day   = (s.day   || s.Day   || "").trim();
         const start = (s.start || s.Start || "").trim();
-        const end = (s.end || s.End || "").trim();
+        const end   = (s.end   || s.End   || "").trim();
         const label = (s.label || s.Label || "").trim();
 
         if (!day || !start || !end || !label) return null;
@@ -146,21 +130,22 @@ Please extract it into JSON as described.
       })
       .filter(Boolean);
 
-    // Always return the same shape the frontend expects
+    console.error("extractTimetable: extracted", cleanSessions.length, "sessions");
+
+    // ✅ IMPORTANT: always return 200 with { sessions: [...] }
+    // even if it's an empty array – do NOT throw a 500 for JSON issues.
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessions: cleanSessions }),
     };
   } catch (err) {
-    console.error("Error in extractTimetable function:", err);
+    console.error("Unexpected error in extractTimetable:", err);
+    // Also fail softly here: frontend will just see sessions: [] if we want
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Server error",
-        detail: err.message,
-      }),
+      body: JSON.stringify({ sessions: [] }),
     };
   }
 };
