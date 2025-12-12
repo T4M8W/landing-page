@@ -134,6 +134,12 @@ Please extract it into the JSON format described above.
 
     // ✅ IMPORTANT: always return 200 with { sessions: [...] }
     // even if it's an empty array – do NOT throw a 500 for JSON issues.
+    // --- DEBUG LOGS TO SEE WHAT WE'RE REALLY RETURNING ---
+console.error("FINAL parsed JSON:", parsed);
+console.error("FINAL sessions length:", cleanSessions.length);
+console.error("FIRST FEW SESSIONS:", cleanSessions.slice(0, 3));
+// ------------------------------------------------------
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
