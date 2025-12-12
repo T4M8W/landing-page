@@ -103,26 +103,34 @@ Please extract it into the JSON format described above.
 
     const completion = await openaiResponse.json();
 
-    let content = completion?.choices?.[0]?.message?.content;
-    console.error("RAW model content (extractTimetable):", content);  // <-- add this
-    let parsed;
-    
+let content = completion?.choices?.[0]?.message?.content;
+console.error("RAW model content (extractTimetable):", content);
 
-    // With response_format: json_object, content *should* already be JSON,
-    // but we'll handle both a string and an object defensively.
-    if (typeof content === "string") {
-      try {
-        parsed = JSON.parse(content);
-      } catch (err) {
-        console.error("Failed to JSON.parse content string:", content);
-        parsed = {};
-      }
-    } else if (content && typeof content === "object") {
-      parsed = content;
-    } else {
-      console.error("Unexpected content format from OpenAI:", content);
-      parsed = {};
-    }
+let parsed = {};
+
+// With response_format: json_object, content should be JSON,
+// but if it's truncated we slice between the first '{' and last '}'.
+if (typeof content === "string") {
+  let raw = content.trim();
+
+  // Grab the largest complete JSON chunk we can
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    raw = raw.slice(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    console.error("Still couldn't parse JSON after slicing:", err);
+    parsed = {};
+  }
+} else if (content && typeof content === "object") {
+  parsed = content;
+} else {
+  console.error("Unexpected content format from OpenAI:", content);
+}
 
     // Just pass through whatever sessions the model returned;
     // frontend will do any extra validation / filtering.
