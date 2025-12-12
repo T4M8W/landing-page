@@ -1,46 +1,25 @@
-// -----------------------------------------------------
-// CHALKBOARDAI – MANUAL ANONYMISATION FLOW
-// -----------------------------------------------------
-// Flow:
-// 1) User uploads CSV -> raw table rendered
-// 2) User clicks "Check for names"
-// 3) System detects a likely name column + scans for names elsewhere
-// 4) If names found outside the name column -> warn and block anonymise
-// 5) If clear -> "You're good to go!" and enable "Anonymise"
-// 6) User clicks "Anonymise"
-// 7) Data is pseudonymised and ready for backend
-// -----------------------------------------------------
+"use strict";
 
-// ---------- Global state ----------
+/**
+ * ---------- Common name detection ----------
+ * (Used for scanning the CSV for pupil names)
+ */
 
-// Top 100 UK Baby Names (ONS 2023) – 50 boys + 50 girls
 const COMMON_NAMES = [
-  // Boys
-  "Noah", "Oliver", "George", "Arthur", "Muhammad",
-  "Leo", "Harry", "Oscar", "Henry", "Theo",
-  "Freddie", "Jack", "Charlie", "Thomas", "Finley",
-  "Jacob", "Arlo", "Archie", "Jude", "Teddy",
-  "Alfie", "Louie", "Lucas", "Isaac", "Tommy",
-  "Alexander", "James", "Roman", "Elijah", "Edward",
-  "Jaxon", "Reggie", "Theo", "Joshua", "Adam",
-  "Max", "Luca", "Riley", "Hunter", "Ezra",
-  "Benjamin", "Harrison", "Daniel", "Logan", "Hudson",
-  "Joseph", "Ethan", "Samuel", "David", "Kai",
+  // Top UK-like names – list from your existing file
+  "Oliver", "George", "Harry", "Jack", "Jacob", "Noah", "Charlie", "Muhammad",
+  "Thomas", "Oscar", "William", "James", "Leo", "Alfie", "Henry", "Joshua",
+  "Freddie", "Archie", "Ethan", "Isaac", "Alexander", "Joseph", "Edward",
+  "Samuel", "Max", "Daniel", "Arthur", "Lucas", "Mohammed", "Logan",
+  "Theodore", "Harrison", "Benjamin", "Mason", "Sebastian", "Finley",
+  "Adam", "Dylan", "Zachary", "Riley", "Toby",
 
-  // Girls
-  "Olivia", "Amelia", "Isla", "Ava", "Freya",
-  "Lily", "Sophia", "Mia", "Willow", "Rosie",
-  "Grace", "Ivy", "Florence", "Emily", "Elsie",
-  "Poppy", "Evie", "Ella", "Luna", "Sienna",
-  "Charlotte", "Harper", "Millie", "Daisy", "Sofia",
-  "Mila", "Aria", "Maya", "Penelope", "Bonnie",
-  "Hallie", "Ada", "Jessica", "Fatima", "Zara",
-  "Esme", "Eliza", "Chloe", "Ellie", "Maeve",
-  "Emma", "Arabella", "Scarlett", "Lottie", "Thea",
-  "Imogen", "Violet", "Layla", "Evelyn", "Bella"
+  "Olivia", "Amelia", "Isla", "Ava", "Emily", "Isabella", "Mia", "Poppy",
+  "Ella", "Lily", "Sophia", "Grace", "Evie", "Scarlett", "Ruby", "Chloe",
+  "Isabelle", "Freya", "Charlotte", "Sienna", "Willow", "Phoebe", "Florence",
+  "Alice", "Jessica", "Harper", "Matilda", "Daisy", "Erin", "Hannah"
 ];
 
-// Build regex pattern for fast name detection
 const namePattern = new RegExp(
   "\\b(" + COMMON_NAMES.map(n => n.toLowerCase()).join("|") + ")\\b",
   "i"
@@ -48,62 +27,263 @@ const namePattern = new RegExp(
 
 function isName(value) {
   if (!value) return false;
-
-  const cleaned = value.toLowerCase().trim();
-
-  return namePattern.test(cleaned);
+  const cleaned = String(value).toLowerCase().trim();
+  return cleaned.length > 1 && namePattern.test(cleaned);
 }
+
+/**
+ * ---------- Global state ----------
+ */
 
 let originalRows = [];       // Raw parsed rows from CSV
 let anonymisedRows = [];     // Rows with pseudonyms applied
 let realToPseudo = {};       // { "Alice Smith": "Pupil 1", ... }
 let pseudoToReal = {};       // { "Pupil 1": "Alice Smith", ... }
-let nameColumnKey = null;    // Header of the detected name column
-let nameCheckPassed = false; // Only true after a clean "check for names"
+let nameColumnKey = null;    // Header of detected name column
+let nameCheckPassed = false;
 let showingPseudonyms = true;
-let currentPlanAnon = "";    // AI response with pseudonyms (Pupil 1, etc.)
+
+let currentPlanAnon = "";    // AI response with pseudonyms
 let currentPlanReal = "";    // Same response with real names
 let showingRealPlan = false;
+
 let highlightedCells = {};   // { rowIndex: { columnKey: true } }
 
-const NAME_COLUMN_CANDIDATES = [
-  "name",
-  "pupil",
-  "pupil name",
-  "student",
-  "child",
-  "full name"
+// Timetable / rota state
+const TIMETABLE_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+const SUPPORT_STATES = [
+  { key: "none",   label: "No support",          className: "support-none"   },
+  { key: "yellow", label: "Partial support (🟡)", className: "support-some"   },
+  { key: "green",  label: "1 adult (🟢)",        className: "support-one"    },
+  { key: "blue",   label: "2+ adults (🔵)",      className: "support-many"   }
 ];
 
-// ---------- DOM wiring ----------
+const SESSION_SUPPORT = {};  // { sessionId: "green" | "blue" | ... }
+let CURRENT_TIMETABLE = [];  // array of {id,day,start,end,label,...}
+
+// A simple, known-good timetable for testing
+const SAMPLE_TIMETABLE = [
+  { id: "mon_0840_0900", day: "Mon", start: "08:40", end: "09:00", label: "Registration" },
+  { id: "mon_0900_0915", day: "Mon", start: "09:00", end: "09:15", label: "Assembly" },
+  { id: "mon_0915_0935", day: "Mon", start: "09:15", end: "09:35", label: "Spelling" },
+  { id: "mon_0935_0945", day: "Mon", start: "09:35", end: "09:45", label: "Writing" },
+  { id: "mon_1045_1100", day: "Mon", start: "10:45", end: "11:00", label: "Break" },
+  { id: "mon_1100_1200", day: "Mon", start: "11:00", end: "12:00", label: "Maths" },
+  { id: "mon_1215_1315", day: "Mon", start: "12:15", end: "13:15", label: "Handwriting" },
+  { id: "mon_1315_1500", day: "Mon", start: "13:15", end: "15:00", label: "PSHE" }
+];
+
+/**
+ * ---------- DOM wiring ----------
+ */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const fileInput           = document.getElementById("csvFileInput");
-  const checkNamesButton    = document.getElementById("checkNamesButton");
-  const anonymiseButton     = document.getElementById("anonymiseButton");
-  const toggleNamesButton   = document.getElementById("toggleNamesButton");
-  const loadTimetableButton = document.getElementById("loadTimetableButton");
-  const generatePlanButton  = document.getElementById("generatePlanButton");
-  const planStatus          = document.getElementById("planStatus");
-  const planOutput          = document.getElementById("planOutput");
-  const togglePlanButton    = document.getElementById("togglePlanNamesButton");
-  const timetableFileInput  = document.getElementById("timetableFileInput");
+  const fileInput            = document.getElementById("csvFileInput");
+  const checkNamesButton     = document.getElementById("checkNamesButton");
+  const anonymiseButton      = document.getElementById("anonymiseButton");
+  const toggleNamesButton    = document.getElementById("toggleNamesButton");
+
+  const timetableFileInput   = document.getElementById("timetableFileInput");
+  const loadTimetableButton  = document.getElementById("loadTimetableButton");
   const timetableTextInput   = document.getElementById("timetableTextInput");
   const extractFromTextButton = document.getElementById("extractFromTextButton");
 
-  // Generate intervention plan (prototype)
+  const generatePlanButton   = document.getElementById("generatePlanButton");
+  const togglePlanButton     = document.getElementById("togglePlanNamesButton");
+  const planStatus           = document.getElementById("planStatus");
+  const planOutput           = document.getElementById("planOutput");
+
+  // --- Class record upload + anonymisation ---
+
+  if (fileInput) {
+    fileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      resetState();
+      handleCsvUploadRaw(file, checkNamesButton);
+    });
+  }
+
+  if (checkNamesButton) {
+    checkNamesButton.addEventListener("click", () => {
+      if (!originalRows.length) {
+        updateStatus("Please upload a class record first.");
+        return;
+      }
+      performNameCheck();
+    });
+  }
+
+  if (anonymiseButton) {
+    anonymiseButton.addEventListener("click", () => {
+      if (!originalRows.length) {
+        updateStatus("Please upload a class record first.");
+        return;
+      }
+      if (!nameCheckPassed) {
+        updateStatus("Please run 'Check for names' and resolve any issues before anonymising.");
+        return;
+      }
+
+      anonymiseData();
+      showingPseudonyms = true;
+      renderTable(anonymisedRows, true);
+      updateStatus("Data anonymised. You can now generate an intervention plan safely.");
+    });
+  }
+
+  if (toggleNamesButton) {
+    toggleNamesButton.addEventListener("click", () => {
+      if (!anonymisedRows.length) return;
+      showingPseudonyms = !showingPseudonyms;
+
+      renderTable(showingPseudonyms ? anonymisedRows : originalRows, showingPseudonyms);
+
+      toggleNamesButton.textContent = showingPseudonyms
+        ? "Show real names"
+        : "Show anonymised names";
+    });
+  }
+
+  // --- Timetable: CSV upload ---
+
+  if (timetableFileInput) {
+    timetableFileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      parseTimetableFile(file);
+    });
+  }
+
+  if (loadTimetableButton) {
+    loadTimetableButton.addEventListener("click", () => {
+      renderTimetableGrid(SAMPLE_TIMETABLE);
+      const timetableStatus = document.getElementById("timetableStatus");
+      if (timetableStatus) {
+        timetableStatus.textContent = "Loaded sample timetable. Click cells to tag support.";
+      }
+    });
+  }
+
+  // --- Timetable: AI extraction from pasted text ---
+
+  if (extractFromTextButton && timetableTextInput) {
+    extractFromTextButton.addEventListener("click", async () => {
+      const rawText = timetableTextInput.value.trim();
+      const statusEl = document.getElementById("timetableAiStatus");
+
+      if (!rawText) {
+        if (statusEl) statusEl.textContent = "Paste your timetable text first.";
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = "Asking the AI to read your timetable…";
+
+      try {
+        const response = await fetch("/.netlify/functions/extractTimetable", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ timetable_text: rawText })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        console.log("AI timetable raw data:", data);
+
+        if (!response.ok) {
+          console.error("extractTimetable backend error:", data);
+          if (statusEl) {
+            statusEl.textContent =
+              data && data.error
+                ? `AI timetable helper error: ${data.error}`
+                : "The AI timetable helper hit an error. Please try again or use the CSV upload.";
+          }
+          return;
+        }
+
+        // Be flexible about shape: either { sessions: [...] } or { result: { sessions: [...] } } or bare array
+        const rawSessions =
+          Array.isArray(data.sessions)         ? data.sessions :
+          Array.isArray(data.result?.sessions) ? data.result.sessions :
+          Array.isArray(data)                  ? data :
+          [];
+
+        if (!rawSessions.length) {
+          if (statusEl) {
+            statusEl.textContent =
+              "I couldn't extract any sessions from that text. " +
+              "You might need to tidy it up or try the CSV upload instead.";
+          }
+          return;
+        }
+
+        const sessions = rawSessions
+          .map((session, index) => {
+            const day   = normaliseDay(session.day || session.Day || "");
+            const start = (session.start || session.Start || "").trim();
+            const end   = (session.end   || session.End   || "").trim();
+            const label = (session.label || session.Label || "").trim();
+
+            if (!day || !start || !end || !label) return null;
+
+            const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
+
+            return {
+              id,
+              day,
+              start,
+              end,
+              label,
+              type: "lesson_general",
+              suitable_for_withdrawal: true,
+              teacher_status: "normal",
+              adult_capacity: 1
+            };
+          })
+          .filter(Boolean);
+
+        if (!sessions.length) {
+          if (statusEl) {
+            statusEl.textContent =
+              "The AI replied, but I couldn't turn it into a usable timetable. " +
+              "Try simplifying the pasted text or use the CSV upload.";
+          }
+          return;
+        }
+
+        // Clear any previous support tagging
+        Object.keys(SESSION_SUPPORT).forEach((key) => delete SESSION_SUPPORT[key]);
+
+        renderTimetableGrid(sessions);
+
+        if (statusEl) {
+          statusEl.textContent =
+            "Timetable extracted. Check it looks right, then click cells to tag support.";
+        }
+      } catch (err) {
+        console.error("Error calling extractTimetable function:", err);
+        const statusEl2 = document.getElementById("timetableAiStatus");
+        if (statusEl2) {
+          statusEl2.textContent =
+            "There was a problem talking to the AI timetable helper. " +
+            "Please try again or use the CSV upload.";
+        }
+      }
+    });
+  }
+
+  // --- AI rota generation ---
+
   if (generatePlanButton) {
     generatePlanButton.addEventListener("click", async () => {
       if (planOutput) planOutput.textContent = "";
 
       const payload = buildRotaPayload();
-      if (!payload) {
-        // buildRotaPayload already set a status message if needed
-        return;
-      }
+      if (!payload) return; // buildRotaPayload has already set a status message
 
       if (planStatus) {
-        planStatus.textContent = "Generating intervention plan… (this may take a few seconds)";
+        planStatus.textContent = "Generating intervention plan… (this may take a few seconds).";
       }
 
       try {
@@ -113,39 +293,19 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
 
-        // Store anonymised + real versions
         currentPlanAnon = data.plan || "No plan text returned from backend.";
         currentPlanReal = reidentifyText(currentPlanAnon);
         showingRealPlan = false;
 
-        if (planOutput) {
-          // Show anonymised version by default
-          planOutput.textContent = currentPlanAnon;
-        }
+        if (planOutput) planOutput.textContent = currentPlanAnon;
 
         if (planStatus) {
           planStatus.textContent = "Intervention plan generated (prototype).";
         }
 
-        // 🔑 Enable the toggle button *here*
-        const toggleBtn = document.getElementById("togglePlanNamesButton");
-        console.log("Enabling toggle button:", toggleBtn);
-        if (toggleBtn) {
-          toggleBtn.disabled = false;              // or toggleBtn.removeAttribute("disabled");
-          toggleBtn.textContent = "Show real pupil names";
-        }
-
-        if (planStatus) {
-          planStatus.textContent = "Intervention plan generated (prototype).";
-        }
-
-        // Enable the toggle button now that we have a plan
         if (togglePlanButton) {
           togglePlanButton.disabled = false;
           togglePlanButton.textContent = "Show real pupil names";
@@ -160,13 +320,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Toggle anonymised / real names in the generated plan
   if (togglePlanButton) {
     togglePlanButton.addEventListener("click", () => {
       if (!currentPlanAnon) return;
 
       showingRealPlan = !showingRealPlan;
-
       if (planOutput) {
         planOutput.textContent = showingRealPlan ? currentPlanReal : currentPlanAnon;
       }
@@ -176,501 +334,11 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Show real pupil names";
     });
   }
-
-    // Upload timetable spreadsheet
-  if (timetableFileInput) {
-    timetableFileInput.addEventListener("change", (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-      parseTimetableFile(file);
-    });
-  }
-
-  if (loadTimetableButton) {
-    loadTimetableButton.addEventListener("click", () => {
-      renderTimetableGrid(SAMPLE_TIMETABLE);
-    });
-  }
-
-
-  if (!fileInput) {
-    console.warn("[ChalkboardAI] csvFileInput not found in DOM.");
-    return;
-  }
-
-    // AI-based timetable extraction from pasted text
-  if (extractFromTextButton && timetableTextInput) {
-  extractFromTextButton.addEventListener("click", async () => {
-    const rawText = timetableTextInput.value.trim();
-    const statusEl = document.getElementById("timetableAiStatus");
-
-    if (!rawText) {
-      if (statusEl) statusEl.textContent = "Paste your timetable text first.";
-      return;
-    }
-
-    if (statusEl) statusEl.textContent = "Asking the AI to read your timetable…";
-
-    try {
-      const response = await fetch("/.netlify/functions/extractTimetable", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timetable_text: rawText })
-      });
-
-      const data = await response.json().catch(() => ({}));
-      console.log("AI timetable raw data:", data);
-
-      if (!response.ok) {
-        console.error("extractTimetable backend error:", data);
-        if (statusEl) {
-          statusEl.textContent =
-            data && data.error
-              ? `AI timetable helper error: ${data.error}`
-              : "The AI timetable helper hit an error. Please try again or use the CSV upload.";
-        }
-        return;
-      }
-
-      // 🔑 Be flexible about where the sessions array lives
-      const rawSessions =
-        Array.isArray(data.sessions)          ? data.sessions :
-        Array.isArray(data)                   ? data :
-        Array.isArray(data.result?.sessions)  ? data.result.sessions :
-        [];
-
-      if (!rawSessions.length) {
-        if (statusEl) {
-          statusEl.textContent =
-            "I couldn't extract any sessions from that text. " +
-            "You might need to tidy it up or try the CSV upload instead.";
-        }
-        return;
-      }
-
-      const sessions = rawSessions
-        .map((session, index) => {
-          const day   = normaliseDay(session.day || session.Day || "");
-          const start = (session.start || session.Start || "").trim();
-          const end   = (session.end   || session.End   || "").trim();
-          const label = (session.label || session.Label || "").trim();
-
-          if (!day || !start || !end || !label) return null;
-
-          const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
-
-          return {
-            id,
-            day,
-            start,
-            end,
-            label,
-            type: "lesson_general",
-            suitable_for_withdrawal: true,
-            teacher_status: "normal",
-            adult_capacity: 1
-          };
-        })
-        .filter(Boolean);
-
-      if (!sessions.length) {
-        if (statusEl) {
-          statusEl.textContent =
-            "The AI replied, but I couldn't turn it into a usable timetable. " +
-            "Try simplifying the pasted text or use the CSV upload.";
-        }
-        return;
-      }
-
-      // Clear any previous support tagging
-      for (const key in SESSION_SUPPORT) {
-        if (Object.prototype.hasOwnProperty.call(SESSION_SUPPORT, key)) {
-          delete SESSION_SUPPORT[key];
-        }
-      }
-
-      renderTimetableGrid(sessions);
-
-      if (statusEl) {
-        statusEl.textContent =
-          "Timetable extracted. Check it looks right, then click cells to tag support.";
-      }
-    } catch (err) {
-      console.error("Error calling extractTimetable function:", err);
-      const statusEl = document.getElementById("timetableAiStatus");
-      if (statusEl) {
-        statusEl.textContent =
-          "There was a problem talking to the AI timetable helper. " +
-          "Please try again or use the CSV upload.";
-      }
-    }
-  });
-}
-
-  // STEP 1: User uploads class record and it renders, raw.
-  fileInput.addEventListener("change", (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-
-    resetState();
-    handleCsvUploadRaw(file);
-  });
-
-  // STEP 2 / 3 / 4 / 5: User clicks "Check for names"
-  if (checkNamesButton) {
-    checkNamesButton.addEventListener("click", () => {
-      if (!originalRows.length) {
-        updateStatus("Please upload a class record first.");
-        return;
-      }
-      performNameCheck();
-    });
-  }
-
-  // STEP 6 / 7: User clicks "Anonymise"
-  if (anonymiseButton) {
-    anonymiseButton.addEventListener("click", () => {
-      if (!originalRows.length) {
-        updateStatus("Please upload a class record first.");
-        return;
-      }
-      if (!nameCheckPassed) {
-        updateStatus("Please run 'Check for names' and resolve any issues before anonymising.");
-        return;
-      }
-      anonymiseData();
-    });
-  }
-
-  if (toggleNamesButton) {
-    toggleNamesButton.addEventListener("click", () => {
-      showingPseudonyms = !showingPseudonyms;
-      updateToggleButtonLabel();
-      renderTable();
-    });
-  }
 });
 
-// ---------- Step 1: upload + raw render ----------
-
-function handleCsvUploadRaw(file) {
-  updateStatus("Parsing CSV…");
-
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    complete: (results) => {
-      if (!results.data || results.data.length === 0) {
-        updateStatus("No data found in the file. Please check your CSV.");
-        return;
-      }
-
-      originalRows = results.data;
-      anonymisedRows = []; // cleared until we anonymise
-      highlightedCells = {}; // clear any previous highlights
-
-      // Render raw data exactly as uploaded
-      showingPseudonyms = false;
-      renderTable();
-
-      enableButton("checkNamesButton", true);
-      enableButton("anonymiseButton", false);
-      hideToggleButton();
-
-      updateStatus("Class record loaded. Please click 'Check for names' to continue.");
-    },
-    error: (err) => {
-      console.error("[ChalkboardAI] PapaParse error:", err);
-      updateStatus("There was a problem parsing the CSV. Please try again.");
-    }
-  });
-}
-
-// ---------- Step 2–5: check for names ----------
-
-function performNameCheck() {
-  const fields = originalRows.length ? Object.keys(originalRows[0]) : [];
-  if (!fields.length) {
-    updateStatus("No columns detected. Please check your CSV format.");
-    return;
-  }
-
-  nameColumnKey = detectNameColumn(fields);
-  console.log("Detected name column:", nameColumnKey);
-  if (!nameColumnKey) {
-    updateStatus(
-      "I couldn't detect a name column. " +
-      "Please ensure your file has a clear pupil name column " +
-      "(e.g. 'Name', 'Pupil Name') and reupload."
-    );
-    nameCheckPassed = false;
-    enableButton("anonymiseButton", false);
-    return;
-  }
-
-  const flaggedCells = findUnexpectedNames(nameColumnKey);
-  console.log("Flagged cells:", flaggedCells);
-
-  // Build highlightedCells map for rendering
-  highlightedCells = {};
-  flaggedCells.forEach((cell) => {
-    const rowIndex = cell.rowNumber - 1; // convert 1-based to 0-based
-    if (!highlightedCells[rowIndex]) {
-      highlightedCells[rowIndex] = {};
-    }
-    highlightedCells[rowIndex][cell.columnKey] = true;
-  });
-
-  // Re-render table so highlights show
-  renderTable();
-
-  if (flaggedCells.length === 0) {
-    nameCheckPassed = true;
-    enableButton("anonymiseButton", true);
-
-    updateStatus(
-      `Name column detected: "${nameColumnKey}". ` +
-      "No additional names detected in other columns. You're good to go! " +
-      "Click 'Anonymise' when you're ready."
-    );
-  } else {
-    nameCheckPassed = false;
-    enableButton("anonymiseButton", false);
-
-    const preview = flaggedCells.slice(0, 5).map(cell =>
-      `Row ${cell.rowNumber}, column "${cell.columnKey}" (value: "${cell.value}")`
-    );
-
-    updateStatus(
-      `Name column detected: "${nameColumnKey}".\n\n` +
-      "However, I also found possible pupil names in other columns:\n" +
-      preview.join("\n") +
-      "\n\nPlease correct these cells in your file and reupload before continuing."
-    );
-  }
-}
-
-function detectNameColumn(fields) {
-  const lowerFields = fields.map((f) => f.toLowerCase().trim());
-  console.log("Fields detected:", fields);
-  console.log("Lowercase fields:", lowerFields);
-  // Try direct matches
-  for (const candidate of NAME_COLUMN_CANDIDATES) {
-    const index = lowerFields.indexOf(candidate);
-    if (index !== -1) {
-      return fields[index];
-    }
-  }
-
-  // Fallback: anything containing "name"
-  for (let i = 0; i < lowerFields.length; i++) {
-    if (lowerFields[i].includes("name")) {
-      return fields[i];
-    }
-  }
-
-  return null;
-}
-
-// Scan for any cells outside the main name column that contain a pupil-like name.
-function findUnexpectedNames(nameColumnKey) {
-  const flagged = [];
-
-  originalRows.forEach((row, rowIndex) => {
-    const rowNumber = rowIndex + 1; // 1-based for user display
-
-    Object.keys(row).forEach((columnKey) => {
-      if (columnKey === nameColumnKey) return; // skip the main name column
-
-      const rawValue = row[columnKey];
-      if (!rawValue) return;
-
-      const cellValue = String(rawValue).trim();
-
-      if (isName(cellValue)) {
-        flagged.push({
-          rowNumber,
-          columnKey,
-          value: cellValue
-        });
-      }
-    });
-  });
-
-  return flagged;
-}
-
-// ---------- Step 6–7: anonymise data ----------
-
-function anonymiseData() {
-  if (!nameColumnKey) {
-    updateStatus("No name column detected. Please run 'Check for names' first.");
-    return;
-  }
-
-  buildPseudonymMaps(nameColumnKey);
-  buildAnonymisedRows(nameColumnKey);
-
-  showingPseudonyms = true;
-  highlightedCells = {}; // once anonymised, clear any prior raw-name flags
-  renderTable();
-  showToggleButton();
-  updateToggleButtonLabel();
-
-  updateStatus(
-    `Anonymisation complete. ` +
-    `Replaced ${Object.keys(realToPseudo).length} pupil names with pseudonyms. ` +
-    "This anonymised dataset is now safe to send to the AI backend. " +
-    "You can toggle between real and anonymised names on this device only."
-  );
-
-  enableButton("generatePlanButton", true);
-}
-
-function buildPseudonymMaps(nameCol) {
-  realToPseudo = {};
-  pseudoToReal = {};
-
-  const uniqueNames = new Set();
-
-  for (const row of originalRows) {
-    const rawName = (row[nameCol] || "").trim();
-    if (!rawName) continue;
-    uniqueNames.add(rawName);
-  }
-
-  let counter = 1;
-  for (const realName of uniqueNames) {
-    const pseudo = `Pupil ${counter}`;
-    realToPseudo[realName] = pseudo;
-    pseudoToReal[pseudo] = realName;
-    counter++;
-  }
-}
-
-function buildAnonymisedRows(nameCol) {
-  anonymisedRows = originalRows.map((row) => {
-    const copy = { ...row };
-    const rawName = (row[nameCol] || "").trim();
-    if (rawName && realToPseudo[rawName]) {
-      copy[nameCol] = realToPseudo[rawName];
-    }
-    return copy;
-  });
-}
-
-// ---------- Table rendering (raw vs anonymised) ----------
-
-function renderTable() {
-  const container = document.getElementById("table-container");
-  if (!container) {
-    console.warn("[ChalkboardAI] table-container not found in DOM.");
-    return;
-  }
-
-  const rowsToRender =
-    showingPseudonyms && anonymisedRows.length ? anonymisedRows : originalRows;
-
-  if (!rowsToRender || rowsToRender.length === 0) {
-    container.innerHTML = "<p>No data to display yet.</p>";
-    return;
-  }
-
-  const fields = Object.keys(rowsToRender[0] || {});
-  if (fields.length === 0) {
-    container.innerHTML = "<p>Data could not be read. Please check the file format.</p>";
-    return;
-  }
-
-  let html = "<table class='chalkboard-table'>";
-  html += "<thead><tr>";
-  fields.forEach((field) => {
-    html += `<th>${escapeHtml(field)}</th>`;
-  });
-  html += "</tr></thead>";
-
-  html += "<tbody>";
-  rowsToRender.forEach((row, rowIndex) => {
-    html += "<tr>";
-    fields.forEach((field) => {
-      const value = row[field] != null ? String(row[field]) : "";
-      const isHighlighted =
-        highlightedCells[rowIndex] && highlightedCells[rowIndex][field];
-
-      const style = isHighlighted
-        ? " style=\"background-color:#fff3cd;font-weight:bold;\""
-        : "";
-
-      html += `<td${style}>${escapeHtml(value)}</td>`;
-    });
-    html += "</tr>";
-  });
-  html += "</tbody></table>";
-
-  container.innerHTML = html;
-}
-
-// ---------- UI helpers ----------
-
-function reidentifyText(text) {
-  if (!text || !pseudoToReal) return text;
-
-  let result = text;
-
-  // Sort to avoid partial overlaps just in case
-  const pseudoKeys = Object.keys(pseudoToReal).sort((a, b) => b.length - a.length);
-
-  pseudoKeys.forEach((pseudo) => {
-    const real = pseudoToReal[pseudo];
-    if (!real) return;
-
-    // Escape regex special chars in the pseudonym
-    const escaped = pseudo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`\\b${escaped}\\b`, "g");
-
-    result = result.replace(regex, real);
-  });
-
-  return result;
-}
-
-function updateStatus(message) {
-  const statusBox = document.getElementById("statusBox");
-  if (statusBox) {
-    statusBox.textContent = message;
-  } else {
-    console.log("[ChalkboardAI STATUS]", message);
-  }
-}
-
-function enableButton(id, enabled) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  btn.disabled = !enabled;
-}
-
-function showToggleButton() {
-  const toggleButton = document.getElementById("toggleNamesButton");
-  if (toggleButton) {
-    toggleButton.style.display = "inline-block";
-  }
-}
-
-function hideToggleButton() {
-  const toggleButton = document.getElementById("toggleNamesButton");
-  if (toggleButton) {
-    toggleButton.style.display = "none";
-  }
-}
-
-function updateToggleButtonLabel() {
-  const toggleButton = document.getElementById("toggleNamesButton");
-  if (!toggleButton) return;
-
-  toggleButton.textContent = showingPseudonyms
-    ? "Show real names"
-    : "Show anonymised names";
-}
+/**
+ * ---------- Class record helpers ----------
+ */
 
 function resetState() {
   originalRows = [];
@@ -679,30 +347,19 @@ function resetState() {
   pseudoToReal = {};
   nameColumnKey = null;
   nameCheckPassed = false;
-  showingPseudonyms = false;
+  showingPseudonyms = true;
   highlightedCells = {};
-
-  enableButton("checkNamesButton", false);
-  enableButton("anonymiseButton", false);
-  hideToggleButton();
-  const container = document.getElementById("table-container");
-  if (container) container.innerHTML = "";
+  updateStatus("");
+  const tableContainer = document.getElementById("table-container");
+  if (tableContainer) tableContainer.innerHTML = "";
 }
 
-function normaliseDay(value) {
-  const v = String(value).trim().toLowerCase();
-  if (!v) return null;
-
-  if (v.startsWith("mon")) return "Mon";
-  if (v.startsWith("tue")) return "Tue";
-  if (v.startsWith("wed")) return "Wed";
-  if (v.startsWith("thu")) return "Thu";
-  if (v.startsWith("fri")) return "Fri";
-
-  return null; // ignore weekends / anything else for now
+function updateStatus(message) {
+  const box = document.getElementById("statusBox");
+  if (!box) return;
+  box.textContent = message;
 }
 
-// Basic HTML escaping for table cells
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -710,486 +367,434 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
-// -----------------------------------------------------
-// SAMPLE TIMETABLE DATA (hard-wired for now)
-// -----------------------------------------------------
+function handleCsvUploadRaw(file, checkNamesButton) {
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      originalRows = results.data.filter(row => Object.values(row).some(v => v !== ""));
+      anonymisedRows = [];
+      nameCheckPassed = false;
+      highlightedCells = {};
+
+      if (checkNamesButton) checkNamesButton.disabled = false;
+
+      renderTable(originalRows, false);
+      updateStatus(
+        `Loaded ${originalRows.length} rows. Click "Check for names" to scan for pupil names.`
+      );
+    },
+    error: (err) => {
+      console.error("CSV parse error:", err);
+      updateStatus("There was a problem reading that file. Please check it and try again.");
+    }
+  });
+}
+
+function renderTable(rows, usingPseudonyms) {
+  const container = document.getElementById("table-container");
+  if (!container) return;
+
+  if (!rows || !rows.length) {
+    container.innerHTML = "<p>No rows to display yet.</p>";
+    return;
+  }
+
+  const headers = Object.keys(rows[0]);
+  const table = document.createElement("table");
+  table.className = "data-table";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  headers.forEach((header) => {
+    const th = document.createElement("th");
+    th.textContent = header;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  rows.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+    headers.forEach((header) => {
+      const td = document.createElement("td");
+      const value = row[header] ?? "";
+      td.innerHTML = escapeHtml(value);
+
+      if (
+        highlightedCells[rowIndex] &&
+        highlightedCells[rowIndex][header]
+      ) {
+        td.classList.add("flagged-cell");
+      }
+
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.innerHTML = "";
+  container.appendChild(table);
+
+  const toggleBtn = document.getElementById("toggleNamesButton");
+  if (toggleBtn && anonymisedRows.length) {
+    toggleBtn.style.display = "inline-block";
+    toggleBtn.disabled = false;
+    toggleBtn.textContent = usingPseudonyms
+      ? "Show real names"
+      : "Show anonymised names";
+  }
+}
+
+function detectNameColumn() {
+  if (!originalRows.length) return null;
+
+  const sample = originalRows[0];
+  const headers = Object.keys(sample);
+
+  // 1) Try explicit "Name"/"Pupil" style headers
+  const NAME_COLUMN_CANDIDATES = [
+    "name",
+    "pupil",
+    "pupil name",
+    "student",
+    "child",
+    "full name"
+  ];
+
+  let bestHeader = null;
+
+  for (const candidate of NAME_COLUMN_CANDIDATES) {
+    const found = headers.find(
+      (h) => h && h.toLowerCase().trim() === candidate
+    );
+    if (found) {
+      bestHeader = found;
+      break;
+    }
+  }
+
+  // 2) Fallback: pick the column with most values that "look like" names
+  if (!bestHeader) {
+    let bestScore = 0;
+    headers.forEach((header) => {
+      let score = 0;
+      originalRows.forEach((row) => {
+        if (isName(row[header])) score += 1;
+      });
+      if (score > bestScore) {
+        bestScore = score;
+        bestHeader = header;
+      }
+    });
+  }
+
+  return bestHeader;
+}
+
+function performNameCheck() {
+  nameColumnKey = detectNameColumn();
+  highlightedCells = {};
+
+  if (!nameColumnKey) {
+    updateStatus(
+      "I couldn't reliably detect a name column. Please check your CSV headings."
+    );
+    renderTable(originalRows, false);
+    return;
+  }
+
+  originalRows.forEach((row, rowIndex) => {
+    const value = row[nameColumnKey];
+    if (isName(value)) {
+      if (!highlightedCells[rowIndex]) highlightedCells[rowIndex] = {};
+      highlightedCells[rowIndex][nameColumnKey] = true;
+    }
+  });
+
+  const totalFlags = Object.values(highlightedCells).reduce(
+    (acc, obj) => acc + Object.keys(obj).length,
+    0
+  );
+
+  if (!totalFlags) {
+    nameCheckPassed = true;
+    updateStatus(
+      `I couldn't see any obvious names in the "${nameColumnKey}" column. ` +
+      "If you're happy with this, you can anonymise."
+    );
+  } else {
+    nameCheckPassed = true;
+    updateStatus(
+      `I detected ${totalFlags} cell(s) that look like pupil names in the "${nameColumnKey}" column. ` +
+      "Please check them, then click Anonymise when you're ready."
+    );
+  }
+
+  renderTable(originalRows, false);
+}
+
+function anonymiseData() {
+  if (!nameColumnKey) return;
+
+  realToPseudo = {};
+  pseudoToReal = {};
+  anonymisedRows = [];
+
+  let counter = 1;
+
+  originalRows.forEach((row) => {
+    const cloned = { ...row };
+    const originalName = row[nameColumnKey];
+
+    if (originalName && originalName.trim() !== "") {
+      let pseudo = realToPseudo[originalName];
+      if (!pseudo) {
+        pseudo = `Pupil ${counter++}`;
+        realToPseudo[originalName] = pseudo;
+        pseudoToReal[pseudo] = originalName;
+      }
+      cloned[nameColumnKey] = pseudo;
+    }
+
+    anonymisedRows.push(cloned);
+  });
+}
+
+function reidentifyText(text) {
+  if (!text || !Object.keys(pseudoToReal).length) return text;
+
+  let output = text;
+  Object.entries(pseudoToReal).forEach(([pseudo, real]) => {
+    const pattern = new RegExp("\\b" + pseudo.replace(/\s+/g, "\\s+") + "\\b", "g");
+    output = output.replace(pattern, real);
+  });
+  return output;
+}
+
+/**
+ * ---------- Timetable helpers ----------
+ */
+
+function normaliseDay(value) {
+  if (!value) return "";
+  const v = String(value).trim().toLowerCase();
+
+  if (v.startsWith("mon")) return "Mon";
+  if (v.startsWith("tue")) return "Tue";
+  if (v.startsWith("wed")) return "Wed";
+  if (v.startsWith("thu")) return "Thu";
+  if (v.startsWith("fri")) return "Fri";
+
+  return v.charAt(0).toUpperCase() + v.slice(1, 3);
+}
+
+function renderTimetableGrid(sessions) {
+  const container = document.getElementById("timetable-grid");
+  const statusBox = document.getElementById("timetableStatus");
+  const generatePlanButton = document.getElementById("generatePlanButton");
+
+  if (!container) return;
+
+  if (!sessions || !sessions.length) {
+    container.innerHTML = "<p>No timetable loaded yet.</p>";
+    if (generatePlanButton) generatePlanButton.disabled = true;
+    return;
+  }
+
+  CURRENT_TIMETABLE = sessions.slice(); // shallow clone
+
+  // Group by day
+  const byDay = {};
+  sessions.forEach((s) => {
+    const day = s.day || s.Day || "";
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(s);
+  });
+
+  TIMETABLE_DAYS.forEach((day) => {
+    if (byDay[day]) {
+      byDay[day].sort((a, b) => (a.start > b.start ? 1 : -1));
+    }
+  });
+
+  const table = document.createElement("table");
+  table.className = "timetable-table";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  ["Day", "Start", "End", "Lesson", "Support"].forEach((h) => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  TIMETABLE_DAYS.forEach((day) => {
+    const daySessions = byDay[day] || [];
+    daySessions.forEach((session) => {
+      const tr = document.createElement("tr");
+
+      const dayTd = document.createElement("td");
+      dayTd.textContent = day;
+      tr.appendChild(dayTd);
+
+      const startTd = document.createElement("td");
+      startTd.textContent = session.start;
+      tr.appendChild(startTd);
+
+      const endTd = document.createElement("td");
+      endTd.textContent = session.end;
+      tr.appendChild(endTd);
+
+      const labelTd = document.createElement("td");
+      labelTd.textContent = session.label;
+      tr.appendChild(labelTd);
+
+      const supportTd = document.createElement("td");
+      const stateKey = SESSION_SUPPORT[session.id] || "none";
+      const state = SUPPORT_STATES.find((s) => s.key === stateKey) || SUPPORT_STATES[0];
+
+      supportTd.textContent = state.label;
+      supportTd.dataset.sessionId = session.id;
+      supportTd.dataset.stateKey = state.key;
+      supportTd.className = state.className + " support-cell";
+
+      tr.appendChild(supportTd);
+      tbody.appendChild(tr);
+    });
+  });
+
+  table.appendChild(tbody);
+  container.innerHTML = "";
+  container.appendChild(table);
+
+  attachTimetableCellHandlers();
+
+  if (statusBox) {
+    statusBox.textContent =
+      "Click in the Support column to cycle through support levels (none → 🟡 → 🟢 → 🔵).";
+  }
+
+  if (generatePlanButton) {
+    generatePlanButton.disabled = false;
+  }
+}
+
+function attachTimetableCellHandlers() {
+  const container = document.getElementById("timetable-grid");
+  if (!container) return;
+
+  container.querySelectorAll("td.support-cell").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      const sessionId = cell.dataset.sessionId;
+      const currentKey = cell.dataset.stateKey || "none";
+      cycleSessionSupport(sessionId, currentKey, cell);
+    });
+  });
+}
+
+function cycleSessionSupport(sessionId, currentKey, cell) {
+  const index = SUPPORT_STATES.findIndex((s) => s.key === currentKey);
+  const next =
+    index === -1
+      ? SUPPORT_STATES[1] // start at yellow if unknown
+      : SUPPORT_STATES[(index + 1) % SUPPORT_STATES.length];
+
+  SESSION_SUPPORT[sessionId] = next.key;
+  cell.dataset.stateKey = next.key;
+  cell.textContent = next.label;
+  cell.className = next.className + " support-cell";
+}
 
-// Days shown in the timetable grid
-const TIMETABLE_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-
-// Support states for each session cell (cycles on click)
-const SUPPORT_STATES = [
-  { key: "unset",    label: "No support",       emoji: ""    },
-  { key: "partial",  label: "Teacher flexible", emoji: "🟡" },
-  { key: "one_adult", label: "1 adult",      emoji: "🟢" },
-  { key: "two_plus", label: "2+ adults",     emoji: "🔵" }
-];
-
-// Stores support state per session id: { "mon_spell": 2, ... }
-const SESSION_SUPPORT = {};
-// The timetable currently in use (either uploaded or the built-in sample)
-let CURRENT_TIMETABLE = [];
-
-const SAMPLE_TIMETABLE = [
-  // MONDAY
-  { id: "mon_reg_am",   day: "Mon", start: "08:40", end: "09:00", label: "Registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_assembly", day: "Mon", start: "09:00", end: "09:20", label: "Assembly",
-    type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_spell",    day: "Mon", start: "09:20", end: "09:40", label: "Spelling",
-    type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_write",    day: "Mon", start: "09:40", end: "10:45", label: "Writing",
-    type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_break",    day: "Mon", start: "10:45", end: "11:00", label: "Break",
-    type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "mon_maths",    day: "Mon", start: "11:00", end: "12:00", label: "Maths",
-    type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_reading",  day: "Mon", start: "12:00", end: "12:15", label: "Reading",
-    type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_lunch",    day: "Mon", start: "12:15", end: "13:00", label: "Lunch",
-    type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "mon_reg_pm",   day: "Mon", start: "13:00", end: "13:15", label: "Afternoon registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_number",   day: "Mon", start: "13:15", end: "13:45", label: "Number Sense",
-    type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_pm1",      day: "Mon", start: "13:45", end: "14:15", label: "Afternoon Session 1",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_pm2",      day: "Mon", start: "14:15", end: "15:00", label: "Afternoon Session 2",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "mon_reader",   day: "Mon", start: "15:00", end: "15:20", label: "Class Reader",
-    type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  // TUESDAY
-  { id: "tue_reg_am",   day: "Tue", start: "08:40", end: "09:00", label: "Registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_assembly", day: "Tue", start: "09:00", end: "09:20", label: "Assembly",
-    type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_spell",    day: "Tue", start: "09:20", end: "09:40", label: "Spelling",
-    type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_write",    day: "Tue", start: "09:40", end: "10:45", label: "Writing",
-    type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_break",    day: "Tue", start: "10:45", end: "11:00", label: "Break",
-    type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "tue_maths",    day: "Tue", start: "11:00", end: "12:00", label: "Maths",
-    type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_reading",  day: "Tue", start: "12:00", end: "12:15", label: "Reading",
-    type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_lunch",    day: "Tue", start: "12:15", end: "13:00", label: "Lunch",
-    type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "tue_reg_pm",   day: "Tue", start: "13:00", end: "13:15", label: "Afternoon registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_number",   day: "Tue", start: "13:15", end: "13:45", label: "Number Sense",
-    type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_pm1",      day: "Tue", start: "13:45", end: "14:15", label: "Afternoon Session 1",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_pm2",      day: "Tue", start: "14:15", end: "15:00", label: "Afternoon Session 2",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "tue_reader",   day: "Tue", start: "15:00", end: "15:20", label: "Class Reader",
-    type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  // WEDNESDAY
-  { id: "wed_reg_am",   day: "Wed", start: "08:40", end: "09:00", label: "Registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_assembly", day: "Wed", start: "09:00", end: "09:20", label: "Assembly",
-    type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_spell",    day: "Wed", start: "09:20", end: "09:40", label: "Spelling",
-    type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_write",    day: "Wed", start: "09:40", end: "10:45", label: "Writing",
-    type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_break",    day: "Wed", start: "10:45", end: "11:00", label: "Break",
-    type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "wed_maths",    day: "Wed", start: "11:00", end: "12:00", label: "Maths",
-    type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_reading",  day: "Wed", start: "12:00", end: "12:15", label: "Reading",
-    type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_lunch",    day: "Wed", start: "12:15", end: "13:00", label: "Lunch",
-    type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "wed_reg_pm",   day: "Wed", start: "13:00", end: "13:15", label: "Afternoon registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_number",   day: "Wed", start: "13:15", end: "13:45", label: "Number Sense",
-    type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_pm1",      day: "Wed", start: "13:45", end: "14:15", label: "Afternoon Session 1",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_pm2",      day: "Wed", start: "14:15", end: "15:00", label: "Afternoon Session 2",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "wed_reader",   day: "Wed", start: "15:00", end: "15:20", label: "Class Reader",
-    type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  // THURSDAY
-  { id: "thu_reg_am",   day: "Thu", start: "08:40", end: "09:00", label: "Registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_assembly", day: "Thu", start: "09:00", end: "09:20", label: "Assembly",
-    type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_spell",    day: "Thu", start: "09:20", end: "09:40", label: "Spelling",
-    type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_write",    day: "Thu", start: "09:40", end: "10:45", label: "Writing",
-    type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_break",    day: "Thu", start: "10:45", end: "11:00", label: "Break",
-    type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "thu_maths",    day: "Thu", start: "11:00", end: "12:00", label: "Maths",
-    type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_reading",  day: "Thu", start: "12:00", end: "12:15", label: "Reading",
-    type: "lesson_reading", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_lunch",    day: "Thu", start: "12:15", end: "13:00", label: "Lunch",
-    type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "thu_reg_pm",   day: "Thu", start: "13:00", end: "13:15", label: "Afternoon registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_number",   day: "Thu", start: "13:15", end: "13:45", label: "Number Sense",
-    type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_pm1",      day: "Thu", start: "13:45", end: "14:15", label: "Afternoon Session 1",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_pm2",      day: "Thu", start: "14:15", end: "15:00", label: "Afternoon Session 2",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "thu_reader",   day: "Thu", start: "15:00", end: "15:20", label: "Class Reader",
-    type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 },
-
-  // FRIDAY
-  { id: "fri_reg_am",   day: "Fri", start: "08:40", end: "09:00", label: "Registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_assembly", day: "Fri", start: "09:00", end: "09:20", label: "Assembly",
-    type: "assembly", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_spell",    day: "Fri", start: "09:20", end: "09:40", label: "Spelling",
-    type: "lesson_spellings", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_write",    day: "Fri", start: "09:40", end: "10:45", label: "Writing",
-    type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_break",    day: "Fri", start: "10:45", end: "11:00", label: "Break",
-    type: "break", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "fri_maths",    day: "Fri", start: "11:00", end: "12:00", label: "Maths",
-    type: "lesson_maths", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_reading",  day: "Fri", start: "12:00", end: "12:15", label: "Reading",
-    type: "lesson_writing", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_lunch",    day: "Fri", start: "12:15", end: "13:00", label: "Lunch",
-    type: "lunch", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 0 },
-
-  { id: "fri_reg_pm",   day: "Fri", start: "13:00", end: "13:15", label: "Afternoon registration",
-    type: "registration", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_number",   day: "Fri", start: "13:15", end: "13:45", label: "Number Sense",
-    type: "lesson_number", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_pm1",      day: "Fri", start: "13:45", end: "14:15", label: "Afternoon Session 1",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_pm2",      day: "Fri", start: "14:15", end: "15:00", label: "Afternoon Session 2",
-    type: "lesson_general", suitable_for_withdrawal: true, teacher_status: "normal", adult_capacity: 1 },
-
-  { id: "fri_reader",   day: "Fri", start: "15:00", end: "15:20", label: "Class Reader",
-    type: "class_reader", suitable_for_withdrawal: false, teacher_status: "normal", adult_capacity: 1 }
-];
-
-// -----------------------------------------------------
-// TIMETABLE RENDERING – GRID VIEW WITH CLICKABLE CELLS
-// -----------------------------------------------------
 function parseTimetableFile(file) {
-  const statusEl = document.getElementById("timetableStatus");
-  if (statusEl) statusEl.textContent = "Reading timetable…";
+  const statusBox = document.getElementById("timetableStatus");
 
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
     complete: (results) => {
-      if (!results.data || !results.data.length) {
-        if (statusEl) statusEl.textContent = "I couldn't find any timetable rows in that file.";
-        return;
-      }
+      const rows = results.data.filter(row => Object.values(row).some(v => v !== ""));
+      const sessions = rows
+        .map((row, index) => {
+          const day = normaliseDay(row.Day || row.day || "");
+          const start = (row.Start || row.start || "").trim();
+          const end = (row.End || row.end || "").trim();
+          const label = (row.Label || row.label || "").trim();
 
-      const rawRows = results.data;
-      const sessions = [];
+          if (!day || !start || !end || !label) return null;
 
-      rawRows.forEach((row, index) => {
-        const dayRaw   = (row.Day   ?? row.day   ?? "").trim();
-        const startRaw = (row.Start ?? row.start ?? "").trim();
-        const endRaw   = (row.End   ?? row.end   ?? "").trim();
-        const labelRaw = (row.Label ?? row.label ?? "").trim();
-
-        const day   = normaliseDay(dayRaw);
-        const start = startRaw;
-        const end   = endRaw;
-        const label = labelRaw;
-
-        // Skip incomplete rows
-        if (!day || !start || !end || !label) return;
-
-        const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
-
-        sessions.push({
-          id,
-          day,
-          start,
-          end,
-          label,
-          // basic defaults for now; we can refine these later
-          type: "lesson_general",
-          suitable_for_withdrawal: true,
-          teacher_status: "normal",
-          adult_capacity: 1
-        });
-      });
+          const id = `${day.toLowerCase()}_${start.replace(":", "")}_${end.replace(":", "")}_${index}`;
+          return { id, day, start, end, label };
+        })
+        .filter(Boolean);
 
       if (!sessions.length) {
-        if (statusEl) {
-          statusEl.textContent =
-            "I couldn't recognise any timetable rows. " +
-            "Check that your headings are Day, Start, End and Label.";
+        if (statusBox) {
+          statusBox.textContent =
+            "I couldn't find any valid rows in that spreadsheet. " +
+            "Make sure it has Day, Start, End and Label columns.";
         }
         return;
       }
 
       // Clear any previous support tagging
-      for (const key in SESSION_SUPPORT) {
-        if (Object.prototype.hasOwnProperty.call(SESSION_SUPPORT, key)) {
-          delete SESSION_SUPPORT[key];
-        }
-      }
-
+      Object.keys(SESSION_SUPPORT).forEach((key) => delete SESSION_SUPPORT[key]);
       renderTimetableGrid(sessions);
 
-      if (statusEl) {
-        statusEl.textContent = "Timetable loaded. Click a cell to tag support.";
+      if (statusBox) {
+        statusBox.textContent =
+          "Timetable loaded. Check it looks right, then click cells to tag support.";
       }
     },
     error: (err) => {
-      console.error("Timetable parse error:", err);
-      if (statusEl) statusEl.textContent = "There was a problem reading that file. Please try again.";
-    }
-  });
-}
-
-function renderTimetableGrid(sessions) {
-  const container = document.getElementById("timetable-grid");
-  const statusEl  = document.getElementById("timetableStatus");
-
-  // Keep a reference to whatever timetable we're currently showing
-  CURRENT_TIMETABLE = Array.isArray(sessions) ? sessions : [];
-
-  if (!container) {
-    console.warn("[ChalkboardAI] timetable-grid not found in DOM.");
-    return;
-  }
-
-  if (!sessions || !sessions.length) {
-    container.innerHTML = "<p>No timetable data to display.</p>";
-    if (statusEl) statusEl.textContent = "No timetable data.";
-    return;
-  }
-
-  if (statusEl) {
-    statusEl.textContent = "Sample timetable loaded (click a cell to tag support).";
-  }
-
-  // 1) Build a list of unique time slots in order
-  const seenSlots = new Set();
-  const timeSlots = []; // { start, end }
-
-  sessions.forEach((session) => {
-    const key = `${session.start}-${session.end}`;
-    if (!seenSlots.has(key)) {
-      seenSlots.add(key);
-      timeSlots.push({ start: session.start, end: session.end });
-    }
-  });
-
-  // 2) Build the grid table: times down the left, days as columns
-  let html = "<table class='chalkboard-table timetable-grid'><thead><tr>";
-
-  // Top-left corner cell
-  html += "<th>Time</th>";
-
-  // Day headers
-  TIMETABLE_DAYS.forEach((day) => {
-    html += `<th>${escapeHtml(day)}</th>`;
-  });
-
-  html += "</tr></thead><tbody>";
-
-  // 3) One row per time slot
-  timeSlots.forEach((slot) => {
-    const timeRange = `${slot.start}–${slot.end}`;
-    html += "<tr>";
-
-    // First cell: time range
-    html += `<td>${escapeHtml(timeRange)}</td>`;
-
-    // Then one cell per day
-    TIMETABLE_DAYS.forEach((day) => {
-      const match = sessions.find(
-        (s) =>
-          s.day === day &&
-          s.start === slot.start &&
-          s.end === slot.end
-      );
-
-      if (match) {
-        // Ensure we have some support state index for this id
-        const supportIndex = SESSION_SUPPORT[match.id] ?? 0;
-        const supportState = SUPPORT_STATES[supportIndex] || SUPPORT_STATES[0];
-
-        const label = match.label || "";
-        let supportHtml = "";
-
-        if (supportState.emoji) {
-          supportHtml = `<div class="support-indicator">${supportState.emoji} ${escapeHtml(supportState.label)}</div>`;
-        }
-
-        html += `
-          <td 
-            class="timetable-cell" 
-            data-session-id="${escapeHtml(match.id)}"
-          >
-            <div class="session-label">${escapeHtml(label)}</div>
-            ${supportHtml}
-          </td>
-        `;
-      } else {
-        // No session at this time on this day
-        html += `<td class="timetable-cell empty-cell"></td>`;
+      console.error("Timetable CSV parse error:", err);
+      if (statusBox) {
+        statusBox.textContent =
+          "There was a problem reading that timetable file. Please check it and try again.";
       }
-    });
-
-    html += "</tr>";
-  });
-
-  html += "</tbody></table>";
-
-  container.innerHTML = html;
-
-  // 4) After inserting the HTML, attach click handlers to cells
-  attachTimetableCellHandlers();
-}
-
-// -----------------------------------------------------
-// CLICK HANDLERS FOR TIMETABLE CELLS
-// -----------------------------------------------------
-
-function attachTimetableCellHandlers() {
-  const cells = document.querySelectorAll("#timetable-grid td[data-session-id]");
-
-  cells.forEach((cell) => {
-    cell.addEventListener("click", () => {
-      const sessionId = cell.getAttribute("data-session-id");
-      if (!sessionId) return;
-
-      cycleSessionSupport(sessionId);
-    });
+    }
   });
 }
 
-function cycleSessionSupport(sessionId) {
-  const currentIndex = SESSION_SUPPORT[sessionId] ?? 0;
-  const nextIndex = (currentIndex + 1) % SUPPORT_STATES.length;
-
-  SESSION_SUPPORT[sessionId] = nextIndex;
-
-  // Re-render the grid so the badge/emoji updates
-  const timetableToRender =
-    CURRENT_TIMETABLE && CURRENT_TIMETABLE.length ? CURRENT_TIMETABLE : SAMPLE_TIMETABLE;
-
-  renderTimetableGrid(timetableToRender);
-}
-
-// -----------------------------------------------------
-// BUILD PAYLOAD FOR BACKEND (prototype)
-// -----------------------------------------------------
+/**
+ * ---------- Build payload for AI rota ----------
+ */
 
 function buildRotaPayload() {
   const planStatus = document.getElementById("planStatus");
 
-  if (!anonymisedRows || !anonymisedRows.length) {
+  if (!anonymisedRows.length) {
     if (planStatus) {
       planStatus.textContent =
-        "Please upload your class record and anonymise it before generating a plan.";
+        "Please upload and anonymise your class record before generating a plan.";
     }
     return null;
   }
 
-  const timetableSource =
-    CURRENT_TIMETABLE && CURRENT_TIMETABLE.length ? CURRENT_TIMETABLE : SAMPLE_TIMETABLE;
-
-  if (!timetableSource || !timetableSource.length) {
+  if (!CURRENT_TIMETABLE.length) {
     if (planStatus) {
-      planStatus.textContent = "Timetable not available. Upload a timetable or load the sample first.";
+      planStatus.textContent =
+        "Please load a timetable (spreadsheet or AI read) before generating a plan.";
     }
     return null;
   }
 
-  const sessionsWithSupport = timetableSource.map((session) => {
-    const index = SESSION_SUPPORT[session.id] ?? 0;
-    const state = SUPPORT_STATES[index] || SUPPORT_STATES[0];
-
-    return {
-      id: session.id,
-      day: session.day,
-      start: session.start,
-      end: session.end,
-      label: session.label,
-      support_key: state.key,
-      support_label: state.label
-    };
-  });
+  const supportTags = Object.entries(SESSION_SUPPORT).map(([sessionId, supportKey]) => {
+    const session = CURRENT_TIMETABLE.find((s) => s.id === sessionId);
+    if (!session) return null;
+    return { ...session, support: supportKey };
+  }).filter(Boolean);
 
   const payload = {
-    meta: {
-      version: "0.1-prototype",
-      generated_at: new Date().toISOString()
-    },
     pupils: anonymisedRows,
-    name_column: nameColumnKey,
-    timetable: sessionsWithSupport
+    timetable: CURRENT_TIMETABLE,
+    support_tags: supportTags
   };
 
   return payload;
